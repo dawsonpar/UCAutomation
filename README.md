@@ -1,16 +1,32 @@
 # UCAutomation
 
 ## Description
-Using the Google Drive API this Raw Conversion Automation will detect when a new raw file has been added to a selected folder.
-Then the raw photo will be converted to DNG.
-This will loop until all raw photos in the folder have been converted.
+Automate the hourly conversion of new raw photos (.arw, .nef, .cr3) uploaded to a specific Google Drive folder to .dng format.
+
 
 ### Functional Requirements
-- Detect addition of files inside of a directory from Google Drive using Google Drive API
-- Convert raw files (.cr3, .arw, .nef) into .dng
+- [ ] Monitor Google Drive folder for new raw photos every hour using Google Drive API
+- [ ] Identify new files: determine which files are new since the last check
+- [ ] Convert raw files (.cr3, .arw, .nef) into .dng
+- [ ] Log operations and errors.
+- [ ] Prevent duplicate file processing.
 
 ### Non-functional Requirements
-- We do not want to delete the raw files
+- Minimal downtime
+- System should handle increasing volumes of photos
+- Codebase should be easy to maintain and well documented.
+- Manage Google Drive API credentials securely.
+- Handle errors and provide informative logs.
 
-### Stretch Features
-- Send email notification about files being converted
+## Architecture
+- A python script will be scheduled to run hourly
+- The script will use the Google Drive API to interact with Google Drive
+- Image conversion will be handled by a combination of rawpy and exiftool.
+
+### Data Flow
+1. Hourly schedule triggers the Python script.
+2. Google Drive Monitor retrieves file list and identifies new files.
+3. Raw to DNG Converter converts new files to .dng.
+4. Google Drive Uploader uploads .dng files to the destination folder.
+5. Logger logs all actions.
+6. The timestamp of processed files is stored.
