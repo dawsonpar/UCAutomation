@@ -11,8 +11,14 @@ def test_list_files():
     mock_credentials = MagicMock()
     mock_service = MagicMock()
     mock_files = [
-        {"id": "1", "name": "test_file.txt", "modifiedTime": "2025-03-03T12:00:00Z"}
+        {
+            "id": "1",
+            "name": "folder_1",
+            "mimeType": "application/vnd.google-apps.folder",
+        },
+        {"id": "2", "name": "file_1.txt", "mimeType": "text/plain"},
     ]
+    subfolder_files = [{"id": "3", "name": "file_2.txt", "mimeType": "text/plain"}]
 
     with patch(
         "google_drive_service.service_account.Credentials.from_service_account_file",
@@ -21,13 +27,32 @@ def test_list_files():
 
         google_drive_service = GoogleDriveService(folder_id)
 
-        mock_service.files.return_value.list.return_value.execute.return_value = {
-            "files": mock_files
-        }
+        mock_service.files.return_value.list.return_value.execute.side_effect = [
+            {"files": mock_files},
+            {"files": subfolder_files},
+        ]
 
         files = google_drive_service.list_files()
 
-        assert files == mock_files
-        mock_service.files.return_value.list.assert_called_once_with(
-            q=f"'{folder_id}' in parents", fields="files(id, name, modifiedTime)"
+        expected_files = [
+            {
+                "id": "1",
+                "name": "folder_1",
+                "mimeType": "application/vnd.google-apps.folder",
+            },
+            {
+                "id": "3",
+                "name": "file_2.txt",
+                "mimeType": "text/plain",
+            },
+            {"id": "2", "name": "file_1.txt", "mimeType": "text/plain"},
+        ]
+
+        assert files == expected_files, f"Expected {expected_files}, but got {files}"
+
+        mock_service.files.return_value.list.assert_any_call(
+            q=f"'{folder_id}' in parents", fields="files(id, name, mimeType)"
+        )
+        mock_service.files.return_value.list.assert_any_call(
+            q=f"'1' in parents", fields="files(id, name, mimeType)"
         )
