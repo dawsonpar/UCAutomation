@@ -46,3 +46,16 @@ class GoogleDriveService:
                 all_files.extend(self.list_files(file["id"], depth + 1))
 
         return all_files
+
+    def download_file(self, file_id, destination):
+        request = self.service.files().get_media(fileId=file_id)
+
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+
+        with open(destination, "wb") as f:
+            downloader = MediaIoBaseDownload(f, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+
+        return os.path.exists(destination)
