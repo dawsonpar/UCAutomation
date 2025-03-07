@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 
 from watchdog.events import FileSystemEventHandler
@@ -18,6 +19,17 @@ class RawFileHandler(FileSystemEventHandler):
 
 
 class RawFileConverter:
-    def convert(self, file_path):
-        # Placeholder for conversion logic
-        print(f"Converting {file_path} to DNG...")
+    def convert(self, file_path, output_dir):
+        converter_path = (
+            "/Applications/Adobe DNG Converter.app/Contents/MacOS/Adobe DNG Converter"
+        )
+
+        command = [converter_path, "-c", "-s", "-d", output_dir, file_path]
+
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"Successfully converted {file_path} to DNG.")
+        else:
+            error_message = f"Error converting {file_path}: {result.stderr}"
+            print(error_message)
+            raise RuntimeError(error_message)

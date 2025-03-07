@@ -1,22 +1,28 @@
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
 from raw_converter import RawFileConverter, RawFileHandler
 
 
 @pytest.fixture
 def raw_file_handler():
-    # Create a mock converter
+    """Fixture to create a mock RawFileHandler instance with a mocked converter."""
     mock_converter = Mock(spec=RawFileConverter)
-    # Create an instance of RawFileHandler with the mock converter
     handler = RawFileHandler(mock_converter)
     return handler, mock_converter
 
 
+@pytest.fixture
+def raw_file_converter():
+    """Fixture to create a RawFileConverter instance."""
+    return RawFileConverter()
+
+
 def test_raw_file_handler_on_created(raw_file_handler):
+    """Test RawFileHandler detects and processes raw files."""
     handler, mock_converter = raw_file_handler
 
-    # Create mock events for different raw file types
     raw_files = [
         "/path/to/file.cr3",
         "/path/to/file.arw",
@@ -30,38 +36,70 @@ def test_raw_file_handler_on_created(raw_file_handler):
         mock_event.is_directory = False
         mock_event.src_path = raw_file
 
-        # Call the on_created method with the mock event
         handler.on_created(mock_event)
 
-        # Assert that the convert method was called with the correct file path
         mock_converter.convert.assert_called_with(raw_file)
 
 
 def test_raw_file_handler_on_created_non_raw_file(raw_file_handler):
+    """Test RawFileHandler ignores non-raw files."""
     handler, mock_converter = raw_file_handler
 
-    # Create a mock event for a non-raw file
     mock_event = Mock()
     mock_event.is_directory = False
     mock_event.src_path = "/path/to/file.txt"
 
-    # Call the on_created method with the mock event
     handler.on_created(mock_event)
 
-    # Assert that the convert method was not called
     mock_converter.convert.assert_not_called()
 
 
 def test_raw_file_handler_on_created_directory(raw_file_handler):
+    """Test RawFileHandler ignores directories."""
     handler, mock_converter = raw_file_handler
 
-    # Create a mock event for a directory
     mock_event = Mock()
     mock_event.is_directory = True
     mock_event.src_path = "/path/to/directory"
 
-    # Call the on_created method with the mock event
     handler.on_created(mock_event)
 
-    # Assert that the convert method was not called
     mock_converter.convert.assert_not_called()
+
+
+@patch("subprocess.run")
+def test_raw_file_converter_success(mock_subprocess, raw_file_converter):
+    """Test RawFileConverter successfully converts a file."""
+    mock_subprocess.return_value = MagicMock(returncode=0)
+
+    input_file = "/path/to/file.cr3"
+    output_dir = "/path/to/output"
+
+    raw_file_converter.convert(input_file, output_dir)
+
+    mock_subprocess.assert_called_once_with(
+        [
+            "/Applications/Adobe DNG Converter.app/Contents/MacOS/Adobe DNG Converter",
+            "-c",
+            "-s",
+            "-d",
+            output_dir,
+            input_file,
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+
+@patch("subprocess.run")
+def test_raw_file_converter_failure(mock_subprocess, raw_file_converter):
+    """Test RawFileConverter handles failed conversion."""
+    mock_subprocess.return_value = MagicMock(returncode=1, stderr="Conversion error")
+
+    input_file = "/path/to/file.cr3"
+    output_dir = "/path/to/output"
+
+    with pytest.raises(Exception):
+        raw_file_converter.convert(input_file, output_dir)
+
+    mock_subprocess.assert_called_once()
