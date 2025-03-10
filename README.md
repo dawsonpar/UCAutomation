@@ -3,13 +3,14 @@
 ## Description
 Automate the hourly conversion of new raw photos (.arw, .nef, .cr3) uploaded to a specific Google Drive folder to .dng format.
 
+## DEVELOPER GUIDE
+[dev_guide](https://github.com/dawsonpar/UCAutomation/blob/main/dev_guide.md)
 
 ### Functional Requirements
 - [ ] Monitor Google Drive folder for new raw photos every hour using Google Drive API
 - [ ] Identify new files: determine which files are new since the last check
-- [ ] Convert raw files (.cr3, .arw, .nef) into .dng
-- [ ] Log operations and errors.
-- [ ] Prevent duplicate file processing.
+- [x] Convert raw files (.cr3, .arw, .nef) into .dng
+- [x] Log operations and errors.
 
 ### Non-functional Requirements
 - Minimal downtime
@@ -21,7 +22,7 @@ Automate the hourly conversion of new raw photos (.arw, .nef, .cr3) uploaded to 
 ## Architecture
 - A python script will be scheduled to run hourly
 - The script will use the Google Drive API to interact with Google Drive
-- Image conversion will be handled by a combination of rawpy and exiftool.
+- Image conversion will be handled by a Adobe DNG Converter
 
 ### Data Flow
 1. Hourly schedule triggers the Python script.
