@@ -59,3 +59,24 @@ class GoogleDriveService:
                 _, done = downloader.next_chunk()
 
         return os.path.exists(destination)
+
+    def upload_file(self, file_path, folder_id=None):
+        """Uploads a file to Google Drive inside the specified folder."""
+        if folder_id is None:
+            folder_id = self.folder_id
+
+        file_metadata = {
+            "name": os.path.basename(file_path),
+            "parents": [folder_id],
+        }
+
+        media = MediaFileUpload(file_path, resumable=True)
+
+        file = (
+            self.service.files()
+            .create(body=file_metadata, media_body=media, fields="id")
+            .execute()
+        )
+
+        print(f"Uploaded {file_path} to Google Drive with ID: {file.get('id')}")
+        return file.get("id")

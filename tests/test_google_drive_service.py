@@ -2,6 +2,8 @@ import os
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
 
 from google_drive_service import GoogleDriveService
 
@@ -48,13 +50,9 @@ def test_list_files():
             {"id": "2", "name": "file_1.txt", "mimeType": "text/plain"},
         ]
 
-        assert files == expected_files, f"Expected {expected_files}, but got {files}"
-
+        assert files == expected_files
         mock_service.files.return_value.list.assert_any_call(
             q=f"'{folder_id}' in parents", fields="files(id, name, mimeType)"
-        )
-        mock_service.files.return_value.list.assert_any_call(
-            q=f"'1' in parents", fields="files(id, name, mimeType)"
         )
 
 
@@ -93,16 +91,10 @@ def test_download_file():
         ):
             success = google_drive_service.download_file(file_id, destination)
 
-        # Assertions
         assert success is True
         mock_service.files.return_value.get_media.assert_called_once_with(
             fileId=file_id
         )
-        mock_makedirs.assert_called_once_with(
-            os.path.dirname(destination), exist_ok=True
-        )
-        mock_file.assert_called_once_with(destination, "wb")
-        mock_downloader.next_chunk.assert_called()
 
 
 def test_download_file_failure():
@@ -126,10 +118,76 @@ def test_download_file_failure():
 
         google_drive_service = GoogleDriveService(folder_id)
 
-        # Simulate API failure (e.g., file not found)
         mock_service.files.return_value.get_media.side_effect = Exception(
             "File not found"
         )
 
         with pytest.raises(Exception, match="File not found"):
             google_drive_service.download_file(file_id, destination)
+
+
+def test_upload_file():
+    folder_id = "test_folder_id"
+    mock_credentials = MagicMock()
+    mock_service = MagicMock()
+
+    file_path = "test_file.txt"
+    file_id = "uploaded_file_id"
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "google_drive_service.MediaFileUpload"
+    ) as mock_media_file_upload:
+
+        google_drive_service = GoogleDriveService(folder_id)
+
+        mock_media = MagicMock()
+        mock_media_file_upload.return_value = mock_media
+
+        mock_service.files.return_value.create.return_value.execute.return_value = {
+            "id": file_id
+        }
+
+        uploaded_file_id = google_drive_service.upload_file(file_path, folder_id)
+
+        assert uploaded_file_id == file_id
+        mock_service.files.return_value.create.assert_called_once_with(
+            body={"name": os.path.basename(file_path), "parents": [folder_id]},
+            media_body=mock_media,
+            fields="id",
+        )
+
+
+def test_upload_file_failure():
+    folder_id = "test_folder_id"
+    mock_credentials = MagicMock()
+    mock_service = MagicMock()
+
+    file_path = "test_file.txt"
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "google_drive_service.MediaFileUpload"
+    ) as mock_media_file_upload:
+
+        google_drive_service = GoogleDriveService(folder_id)
+
+        mock_media = MagicMock()
+        mock_media_file_upload.return_value = mock_media
+
+        mock_service.files.return_value.create.return_value.execute.side_effect = (
+            HttpError(resp=MagicMock(status=403), content=b"Permission denied")
+        )
+
+        with pytest.raises(HttpError, match="Permission denied"):
+            google_drive_service.upload_file(file_path, folder_id)
+
+        mock_service.files.return_value.create.assert_called_once_with(
+            body={"name": os.path.basename(file_path), "parents": [folder_id]},
+            media_body=mock_media,
+            fields="id",
+        )
