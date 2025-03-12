@@ -4,15 +4,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from raw_converter import RawFileConverter, RawFileHandler
-
-
-@pytest.fixture
-def raw_file_handler():
-    """Fixture to create a mock RawFileHandler instance with a mocked converter."""
-    mock_converter = Mock(spec=RawFileConverter)
-    handler = RawFileHandler(mock_converter)
-    return handler, mock_converter
+from raw_converter import RawFileConverter
 
 
 @pytest.fixture
@@ -20,54 +12,6 @@ def raw_file_converter(tmp_path):
     """Fixture to create a RawFileConverter instance with a temporary processed files path."""
     processed_files_path = tmp_path / "processed_files.json"
     return RawFileConverter(str(processed_files_path))
-
-
-def test_raw_file_handler_on_created(raw_file_handler):
-    """Test RawFileHandler detects and processes raw files."""
-    handler, mock_converter = raw_file_handler
-
-    raw_files = [
-        "/path/to/file.cr3",
-        "/path/to/file.arw",
-        "/path/to/file.ARW",
-        "/path/to/file.nef",
-        "/path/to/file.NEF",
-    ]
-
-    for raw_file in raw_files:
-        mock_event = Mock()
-        mock_event.is_directory = False
-        mock_event.src_path = raw_file
-
-        handler.on_created(mock_event)
-
-        mock_converter.convert.assert_called_with(raw_file)
-
-
-def test_raw_file_handler_on_created_non_raw_file(raw_file_handler):
-    """Test RawFileHandler ignores non-raw files."""
-    handler, mock_converter = raw_file_handler
-
-    mock_event = Mock()
-    mock_event.is_directory = False
-    mock_event.src_path = "/path/to/file.txt"
-
-    handler.on_created(mock_event)
-
-    mock_converter.convert.assert_not_called()
-
-
-def test_raw_file_handler_on_created_directory(raw_file_handler):
-    """Test RawFileHandler ignores directories."""
-    handler, mock_converter = raw_file_handler
-
-    mock_event = Mock()
-    mock_event.is_directory = True
-    mock_event.src_path = "/path/to/directory"
-
-    handler.on_created(mock_event)
-
-    mock_converter.convert.assert_not_called()
 
 
 @patch("subprocess.run")

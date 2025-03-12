@@ -1,7 +1,7 @@
 import os
 
 from google_drive_service import GoogleDriveService
-from raw_converter import RawFileConverter, RawFileHandler
+from raw_converter import RawFileConverter
 
 
 def main():
@@ -16,7 +16,6 @@ def main():
 
     drive_service = GoogleDriveService(folder_id, processed_files_path)
     converter = RawFileConverter(processed_files_path)
-    raw_file_handler = RawFileHandler(converter)
 
     files = drive_service.list_files()
 
