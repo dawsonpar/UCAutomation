@@ -7,7 +7,7 @@ from raw_converter import RawFileConverter, RawFileHandler
 def main():
     folder_id = "1p6i00JY5lnYBzapVSKHtyd5IRFABuSTA"  # api-test folder
     dng_folder_id = "1ZJSh2_cjeFOTNtVMPix7ouE0BZoXSbHS"
-    processed_files_path = "src/processed_files.json"
+    processed_files_path = "lib/processed_files.json"
     download_dir = "downloads/raw_files"
     output_dir = "downloads/dng_files"
 
@@ -15,7 +15,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     drive_service = GoogleDriveService(folder_id, processed_files_path)
-    converter = RawFileConverter()
+    converter = RawFileConverter(processed_files_path)
     raw_file_handler = RawFileHandler(converter)
 
     files = drive_service.list_files()
@@ -35,22 +35,21 @@ def main():
 
             # convert file
             try:
-                converter.convert(local_path, output_dir)
-                print(f"Successfully converted {local_path} to DNG.")
+                converted = converter.convert(local_path, output_dir)
 
-                # Get the converted file path
-                dng_file_name = os.path.splitext(file["name"])[0] + ".dng"
-                dng_file_path = os.path.join(output_dir, dng_file_name)
+                if converted:
+                    # Get the converted file path
+                    dng_file_name = os.path.splitext(file["name"])[0] + ".dng"
+                    dng_file_path = os.path.join(output_dir, dng_file_name)
 
-                # Upload the converted file to Google Drive
-                try:
-                    drive_service.upload_file(dng_file_path, dng_folder_id)
-                    print(f"Uploaded {dng_file_name} to Google Drive.")
-                except Exception as e:
-                    print(
-                        f"Failed to upload {dng_file_name} to Google Drive: {e}"
-                        + "\n HINT: Does drive-automation@ucautomation.iam.gserviceaccount.com have permission to access the destination folder?"
-                    )
+                    # Upload the converted file to Google Drive
+                    try:
+                        drive_service.upload_file(dng_file_path, dng_folder_id)
+                    except Exception as e:
+                        print(
+                            f"Failed to upload {dng_file_name} to Google Drive: {e}\n"
+                            + "HINT: Does drive-automation@ucautomation.iam.gserviceaccount.com have permission to access the destination folder?"
+                        )
 
             except Exception as e:
                 print(f"Failed to convert {file['name']}: {e}")
