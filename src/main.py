@@ -5,11 +5,15 @@ from raw_converter import RawFileConverter
 
 
 def main():
-    folder_id = "1p6i00JY5lnYBzapVSKHtyd5IRFABuSTA"  # api-test folder
-    dng_folder_id = "1ZJSh2_cjeFOTNtVMPix7ouE0BZoXSbHS"
-    processed_files_path = "lib/processed_files.json"
-    download_dir = "downloads/raw_files"
-    output_dir = "downloads/dng_files"
+    folder_id = "12SZPTO7671sX4YLUv09V4Y6lz1zaV5qY"  # _Andrews\ Event\ Photography Dropbox/_0 UCAUTOMATION_BETA/Ingest
+    dng_folder_id = "1OpcrTikcNSLYBdaOmVxb7Veh-k4Q9qap"  # _Andrews\ Event\ Photography Dropbox/_0 UCAUTOMATION_BETA/Converted\ DNGs
+
+    home_dir = os.path.expanduser("~")
+    base_dir = os.path.join(home_dir, "UCAutomation")
+
+    download_dir = os.path.join(base_dir, "downloads/raw_files")
+    output_dir = os.path.join(base_dir, "downloads/dng_files")
+    processed_files_path = os.path.join(base_dir, "lib/processed_files.json")
 
     os.makedirs(download_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
