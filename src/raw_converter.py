@@ -1,8 +1,18 @@
 import json
+import logging
 import os
 import subprocess
 import threading
 import time
+
+# Configure logging
+log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
+logging.basicConfig(
+    filename=log_file,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class RawFileConverter:
@@ -41,7 +51,7 @@ class RawFileConverter:
         file_name = os.path.basename(file_path)
 
         if self.is_processed(file_name):
-            print(f"Skipping {file_name}, already processed.")
+            logging.info(f"Skipping {file_name}, already processed.")
             return False
 
         converter_path = (
@@ -52,10 +62,10 @@ class RawFileConverter:
 
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode == 0:
-            print(f"Successfully converted {file_path} to DNG.")
+            logging.info(f"Successfully converted {file_path} to DNG.")
             self.mark_as_processed(file_name)
             return True
         else:
             error_message = f"Error converting {file_path}: {result.stderr}"
-            print(error_message)
+            logging.error(error_message)
             raise RuntimeError(error_message)

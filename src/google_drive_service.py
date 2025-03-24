@@ -1,10 +1,20 @@
 import io
 import json
+import logging
 import os
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+
+# Configure logging
+log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
+logging.basicConfig(
+    filename=log_file,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class GoogleDriveService:
@@ -37,7 +47,7 @@ class GoogleDriveService:
 
         for file in files:
             indent = "  " * depth
-            print(f"{indent}- {file['name']} (ID: {file['id']})")
+            logging.info(f"{indent}- {file['name']} (ID: {file['id']})")
 
             all_files.append(file)
 
@@ -78,5 +88,5 @@ class GoogleDriveService:
             .execute()
         )
 
-        print(f"Uploaded {file_path} to Google Drive with ID: {file.get('id')}")
+        logging.info(f"Uploaded {file_path} to Google Drive with ID: {file.get('id')}")
         return file.get("id")

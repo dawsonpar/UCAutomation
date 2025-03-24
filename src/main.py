@@ -1,10 +1,22 @@
+import logging
 import os
 
 from google_drive_service import GoogleDriveService
 from raw_converter import RawFileConverter
 
+# Configure logging
+log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
+logging.basicConfig(
+    filename=log_file,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
 
 def main():
+    logging.info("Starting raw converter")
+
     folder_id = "12SZPTO7671sX4YLUv09V4Y6lz1zaV5qY"  # _Andrews\ Event\ Photography Dropbox/_0 UCAUTOMATION_BETA/Ingest
     dng_folder_id = "1OpcrTikcNSLYBdaOmVxb7Veh-k4Q9qap"  # _Andrews\ Event\ Photography Dropbox/_0 UCAUTOMATION_BETA/Converted\ DNGs
 
@@ -15,12 +27,17 @@ def main():
     output_dir = os.path.join(base_dir, "downloads/dng_files")
     processed_files_path = os.path.join(base_dir, "lib/processed_files.json")
 
-    os.makedirs(download_dir, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
+    try:
+        os.makedirs(download_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
+    except Exception as e:
+        logging.error(f"Failed to create directories: {e}")
+        return
 
     drive_service = GoogleDriveService(folder_id, processed_files_path)
     converter = RawFileConverter(processed_files_path)
 
+    logging.info("Fetching file list from Google Drive.")
     files = drive_service.list_files()
 
     raw_files = [
@@ -34,7 +51,7 @@ def main():
 
         # download file
         if drive_service.download_file(file["id"], local_path):
-            print(f"Downloaded: {file['name']} to {local_path}")
+            logging.info(f"Downloaded: {file['name']} to {local_path}")
 
             # convert file
             try:
@@ -48,14 +65,17 @@ def main():
                     # Upload the converted file to Google Drive
                     try:
                         drive_service.upload_file(dng_file_path, dng_folder_id)
+                        logging.info(f"Uploaded {dng_file_name} to Google Drive.")
                     except Exception as e:
-                        print(
+                        logging.error(
                             f"Failed to upload {dng_file_name} to Google Drive: {e}\n"
                             + "HINT: Does drive-automation@ucautomation.iam.gserviceaccount.com have permission to access the destination folder?"
                         )
 
             except Exception as e:
-                print(f"Failed to convert {file['name']}: {e}")
+                logging.error(f"Failed to convert {file['name']}: {e}")
+
+    logging.info("Script execution completed.")
 
 
 if __name__ == "__main__":
