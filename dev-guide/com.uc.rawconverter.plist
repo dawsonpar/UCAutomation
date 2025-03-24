@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>com.uc.rawconverter</string>
+
+        <key>ProgramArguments</key>
+        <array>
+            <string>/Library/Frameworks/Python.framework/Versions/3.12/bin/python3</string>
+            <string>/Users/photographer/UCAutomation/src/main.py</string>
+        </array>
+
+        <key>StartInterval</key>
+        <integer>3600</integer>  <!-- Runs every hour -->
+
+        <key>StandardOutPath</key>
+        <string>/Users/photographer/UCAutomation/lib/rawconverter_out.log</string>
+
+        <key>StandardErrorPath</key>
+        <string>/Users/photographer/UCAutomation/lib/rawconverter_error.log</string> <!-- Added for error logging -->
+
+        <key>EnvironmentVariables</key>
+        <dict>
+            <key>GOOGLE_CREDENTIALS_PATH</key>
+            <string>/Users/photographer/UCAutomation/credentials.json</string>
+        </dict>
+    </dict>
+</plist>
