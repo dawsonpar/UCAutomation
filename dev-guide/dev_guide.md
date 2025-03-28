@@ -10,6 +10,16 @@ Clone or download this repo onto the designated machine.
 
 Rename the project folder to UCAutomation and move it to the current user's directory (e.g. ~/Users/photographer/UCAutomation).
 
+### 2. Move the launchd file into LaunchAgents
+
+Inside of the dev-guide folder there is a launchd plist file that needs to be moved to ~/Library/LaunchAgents
+
+A simple way to move the file here is to open the terminal and run the command
+```
+cd Library/LaunchAgents/ && open .
+```
+
+This will open a finder window inside of the LaunchAgents folder. Now drag the file `com.uc.rawconverter.plist` into the LaunchAgents folder.
 
 # Common errors
 
