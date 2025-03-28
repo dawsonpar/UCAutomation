@@ -1,5 +1,7 @@
 # Common errors
 
+Some change
+
 ### Script doesn't have the credentials to run
 - Download credentials.json
 - Run the following command replacing with the proper path: export GOOGLE_CREDENTIALS_PATH="/path/to/credentials/credentials.json" 
