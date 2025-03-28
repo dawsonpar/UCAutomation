@@ -1,6 +1,17 @@
-# Common errors
+# How to install
+### Requirements
+- Must run on a Mac machine
+- Pyenv must be installed with python >= 3.13.1
+- Adobe DNG Converter must be installed
 
-Some change
+### 1. Download this repo
+
+Clone or download this repo onto the designated machine.
+
+Rename the project folder to UCAutomation and move it to the current user's directory (e.g. ~/Users/photographer/UCAutomation).
+
+
+# Common errors
 
 ### Script doesn't have the credentials to run
 - Download credentials.json
