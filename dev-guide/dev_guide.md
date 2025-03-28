@@ -45,6 +45,12 @@ pyenv local ucauto
 ```
 The virtualenv name ucauto can be changed to your liking
 
+### 4. Install dependencies
+In the terminal navigate to the UCAutomation folder and run the following command
+```
+pip3 install -r src/requirements.txt
+```
+
 # Common errors
 
 ### Script doesn't have the credentials to run
