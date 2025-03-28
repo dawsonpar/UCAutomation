@@ -21,6 +21,30 @@ cd Library/LaunchAgents/ && open .
 
 This will open a finder window inside of the LaunchAgents folder. Now drag the file `com.uc.rawconverter.plist` into the LaunchAgents folder.
 
+### 3. Set up pyenv
+Open a terminal window and navigate to the UCAutomation folder (if in the correct spot it should be /Users/{myUser}/UCAutomation)
+
+Run the command `pyenv version`
+
+If it says version x is not installed then go ahead and run the command 
+```
+pyenv install {x}
+```
+
+Once installed run the command `pyenv local {x}`
+
+Install pyenv-virtualenv if not already downloaded using 
+```
+brew install pyenv-virtualenv
+```
+
+Now create and use an isolated virtual environment by running the commands
+```
+pyenv virtualenv 3.13.1 ucauto
+pyenv local ucauto
+```
+The virtualenv name ucauto can be changed to your liking
+
 # Common errors
 
 ### Script doesn't have the credentials to run
