@@ -53,6 +53,9 @@ pip3 install -r src/requirements.txt
 
 # Common errors
 
+### No such file or directory: 'Users/{User}/UCAutomation/lib/rawconverter_out.log
+Create the lib folder inside the UCAutomation folder manually.
+
 ### Script doesn't have the credentials to run
 - Download credentials.json
 - Run the following command replacing with the proper path: export GOOGLE_CREDENTIALS_PATH="/path/to/credentials/credentials.json" 
