@@ -25,6 +25,7 @@ class GoogleDriveService:
         credentials_path=None,
         processed_files_path="processed_files.json",
     ):
+        load_dotenv()
         credentials_path = credentials_path or os.environ.get("GOOGLE_CREDENTIALS_PATH")
         if not credentials_path:
             raise ValueError("GOOGLE_CREDENTIALS_PATH environment variable not set.")
