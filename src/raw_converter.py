@@ -1,9 +1,9 @@
-import json
 import logging
 import os
 import subprocess
 import threading
-import time
+
+from firestore_service import FirestoreService
 
 # Configure logging
 log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
@@ -16,56 +16,105 @@ logging.basicConfig(
 
 
 class RawFileConverter:
-    def __init__(self, processed_files_path):
-        self.processed_files_path = processed_files_path
-        self.lock = threading.Lock()
-        self._load_processed_files()
+    def __init__(
+        self,
+        firestore_service=None,
+        firebase_credentials_path=None,
+        collection_name="processed_files",
+    ):
+        """Initialize the RawFileConverter
 
-    def _load_processed_files(self):
-        """Load the processed files from JSON."""
-        if not os.path.exists(self.processed_files_path):
-            self.processed_files = {"processed": []}
-            self._save_processed_files()
+        Args:
+            firestore_service: An existing FirestoreService instance or None to create a new one
+            firebase_credentials_path: Path to Firebase credentials file (if creating a new service)
+            collection_name: Name of the Firestore collection to use
+        """
+        if firestore_service:
+            self.firestore_service = firestore_service
         else:
-            with open(self.processed_files_path, "r") as f:
-                self.processed_files = json.load(f)
+            self.firestore_service = FirestoreService(
+                collection_name=collection_name,
+                credentials_path=firebase_credentials_path,
+            )
+        self.lock = threading.Lock()
 
-    def _save_processed_files(self):
-        """Save the processed files to JSON."""
-        os.makedirs(os.path.dirname(self.processed_files_path), exist_ok=True)
+    def is_processed(self, file_id):
+        """Check if the file has already been processed using Firestore."""
+        return self.firestore_service.is_processed(file_id)
+
+    def mark_as_processing(self, file_id, machine_id=None):
+        """Mark a file as currently being processed in Firestore.
+
+        Returns:
+            bool: True if successfully marked as processing, False if already being processed
+        """
         with self.lock:
-            with open(self.processed_files_path, "w") as f:
-                json.dump(self.processed_files, f, indent=4)
+            return self.firestore_service.mark_as_processing(file_id, machine_id)
 
-    def is_processed(self, file_name):
-        """Check if the file has already been processed."""
-        return file_name in self.processed_files["processed"]
+    def mark_as_processed(self, file_id, additional_data=None, machine_id=None):
+        """Mark a file as processed and update Firestore."""
+        with self.lock:
+            return self.firestore_service.mark_as_processed(
+                file_id, machine_id, additional_data
+            )
 
-    def mark_as_processed(self, file_name):
-        """Mark a file as processed and update the JSON file."""
-        if file_name not in self.processed_files["processed"]:
-            self.processed_files["processed"].append(file_name)
-            self._save_processed_files()
+    def convert(self, file_path, output_dir, file_id=None, already_marked=False):
+        """Convert a raw file to DNG format
 
-    def convert(self, file_path, output_dir):
+        Args:
+            file_path: Path to the raw file
+            output_dir: Directory to output the converted DNG file
+            file_id: Google Drive file ID (used for tracking in Firestore)
+            already_marked: If True, skip the mark_as_processing check
+
+        Returns:
+            bool: True if conversion was successful, False if skipped
+
+        Raises:
+            RuntimeError: If conversion fails
+        """
         file_name = os.path.basename(file_path)
 
-        if self.is_processed(file_name):
+        # Use file_name as file_id if not provided
+        if file_id is None:
+            file_id = file_name
+
+        # Check if already processed
+        if self.is_processed(file_id):
             logging.info(f"Skipping {file_name}, already processed.")
+            return False
+
+        # Try to mark file as processing, return if already being processed
+        if not already_marked and not self.mark_as_processing(file_id):
+            logging.info(
+                f"Skipping {file_name}, already being processed by another machine."
+            )
             return False
 
         converter_path = (
             "/Applications/Adobe DNG Converter.app/Contents/MacOS/Adobe DNG Converter"
         )
 
+        # Check if converter exists
+        if not os.path.exists(converter_path):
+            error_message = f"Adobe DNG Converter not found at {converter_path}"
+            logging.error(error_message)
+            raise FileNotFoundError(error_message)
+
         command = [converter_path, "-c", "-s", "-d", output_dir, file_path]
 
-        result = subprocess.run(command, capture_output=True, text=True)
-        if result.returncode == 0:
-            logging.info(f"Successfully converted {file_path} to DNG.")
-            self.mark_as_processed(file_name)
-            return True
-        else:
-            error_message = f"Error converting {file_path}: {result.stderr}"
-            logging.error(error_message)
-            raise RuntimeError(error_message)
+        try:
+            result = subprocess.run(command, capture_output=True, text=True)
+            if result.returncode == 0:
+                dng_file_name = os.path.splitext(file_name)[0] + ".dng"
+                dng_file_path = os.path.join(output_dir, dng_file_name)
+
+                logging.info(f"Successfully converted {file_path} to DNG.")
+                return True
+            else:
+                error_message = f"Error converting {file_path}: {result.stderr}"
+                logging.error(error_message)
+                raise RuntimeError(error_message)
+        except Exception as e:
+            logging.error(f"Exception while converting {file_path}: {str(e)}")
+            raise
