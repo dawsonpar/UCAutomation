@@ -3,6 +3,7 @@ import json
 import logging
 import os
 
+from dotenv import load_dotenv
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
@@ -18,8 +19,13 @@ logging.basicConfig(
 
 
 class GoogleDriveService:
-    def __init__(self, folder_id, processed_files_path="processed_files.json"):
-        credentials_path = os.environ.get("GOOGLE_CREDENTIALS_PATH")
+    def __init__(
+        self,
+        folder_id,
+        credentials_path=None,
+        processed_files_path="processed_files.json",
+    ):
+        credentials_path = credentials_path or os.environ.get("GOOGLE_CREDENTIALS_PATH")
         if not credentials_path:
             raise ValueError("GOOGLE_CREDENTIALS_PATH environment variable not set.")
         self.credentials = service_account.Credentials.from_service_account_file(

@@ -27,7 +27,9 @@ def test_list_files():
         return_value=mock_credentials,
     ), patch("google_drive_service.build", return_value=mock_service):
 
-        google_drive_service = GoogleDriveService(folder_id)
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
 
         mock_service.files.return_value.list.return_value.execute.side_effect = [
             {"files": mock_files},
@@ -75,9 +77,10 @@ def test_download_file():
         "os.path.exists", return_value=True
     ) as mock_exists:
 
-        google_drive_service = GoogleDriveService(folder_id)
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
 
-        # Mock API request and download behavior
         mock_request = MagicMock()
         mock_service.files.return_value.get_media.return_value = mock_request
         mock_downloader = MagicMock()
@@ -116,7 +119,9 @@ def test_download_file_failure():
         "os.path.exists", return_value=False
     ):
 
-        google_drive_service = GoogleDriveService(folder_id)
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
 
         mock_service.files.return_value.get_media.side_effect = Exception(
             "File not found"
@@ -141,7 +146,9 @@ def test_upload_file():
         "google_drive_service.MediaFileUpload"
     ) as mock_media_file_upload:
 
-        google_drive_service = GoogleDriveService(folder_id)
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
 
         mock_media = MagicMock()
         mock_media_file_upload.return_value = mock_media
@@ -174,7 +181,9 @@ def test_upload_file_failure():
         "google_drive_service.MediaFileUpload"
     ) as mock_media_file_upload:
 
-        google_drive_service = GoogleDriveService(folder_id)
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
 
         mock_media = MagicMock()
         mock_media_file_upload.return_value = mock_media

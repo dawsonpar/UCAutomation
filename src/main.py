@@ -1,6 +1,8 @@
 import logging
 import os
 
+from dotenv import load_dotenv
+
 from google_drive_service import GoogleDriveService
 from raw_converter import RawFileConverter
 
@@ -15,67 +17,71 @@ logging.basicConfig(
 
 
 def main():
+    load_dotenv()
     logging.info("Starting raw converter")
 
-    folder_id = "12SZPTO7671sX4YLUv09V4Y6lz1zaV5qY"  # _Andrews\ Event\ Photography Dropbox/_0 UCAUTOMATION_BETA/Ingest
-    dng_folder_id = "1OpcrTikcNSLYBdaOmVxb7Veh-k4Q9qap"  # _Andrews\ Event\ Photography Dropbox/_0 UCAUTOMATION_BETA/Converted\ DNGs
+    folder_id = os.environ.get("INGEST_FOLDER_ID")
+    dng_folder_id = os.environ.get("DNG_FOLDER_ID")
 
-    home_dir = os.path.expanduser("~")
-    base_dir = os.path.join(home_dir, "UCAutomation")
+    print(str(folder_id))
+    print(str(dng_folder_id))
 
-    download_dir = os.path.join(base_dir, "downloads/raw_files")
-    output_dir = os.path.join(base_dir, "downloads/dng_files")
-    processed_files_path = os.path.join(base_dir, "lib/processed_files.json")
+    # home_dir = os.path.expanduser("~")
+    # base_dir = os.path.join(home_dir, "UCAutomation")
 
-    try:
-        os.makedirs(download_dir, exist_ok=True)
-        os.makedirs(output_dir, exist_ok=True)
-    except Exception as e:
-        logging.error(f"Failed to create directories: {e}")
-        return
+    # download_dir = os.path.join(base_dir, "downloads/raw_files")
+    # output_dir = os.path.join(base_dir, "downloads/dng_files")
+    # processed_files_path = os.path.join(base_dir, "lib/processed_files.json")
 
-    drive_service = GoogleDriveService(folder_id, processed_files_path)
-    converter = RawFileConverter(processed_files_path)
+    # try:
+    #     os.makedirs(download_dir, exist_ok=True)
+    #     os.makedirs(output_dir, exist_ok=True)
+    # except Exception as e:
+    #     logging.error(f"Failed to create directories: {e}")
+    #     return
 
-    logging.info("Fetching file list from Google Drive.")
-    files = drive_service.list_files()
+    # drive_service = GoogleDriveService(folder_id, processed_files_path)
+    # converter = RawFileConverter(processed_files_path)
 
-    raw_files = [
-        file
-        for file in files
-        if file["name"].lower().endswith((".cr3", ".arw", ".nef"))
-    ]
+    # logging.info("Fetching file list from Google Drive.")
+    # files = drive_service.list_files()
 
-    for file in raw_files:
-        local_path = os.path.join(download_dir, file["name"])
+    # raw_files = [
+    #     file
+    #     for file in files
+    #     if file["name"].lower().endswith((".cr3", ".arw", ".nef"))
+    # ]
 
-        # download file
-        if drive_service.download_file(file["id"], local_path):
-            logging.info(f"Downloaded: {file['name']} to {local_path}")
+    # for file in raw_files:
+    #     local_path = os.path.join(download_dir, file["name"])
 
-            # convert file
-            try:
-                converted = converter.convert(local_path, output_dir)
+    #     # download file
+    #     if drive_service.download_file(file["id"], local_path):
+    #         logging.info(f"Downloaded: {file['name']} to {local_path}")
 
-                if converted:
-                    # Get the converted file path
-                    dng_file_name = os.path.splitext(file["name"])[0] + ".dng"
-                    dng_file_path = os.path.join(output_dir, dng_file_name)
+    #         # convert file
+    #         try:
+    #             converted = converter.convert(local_path, output_dir)
 
-                    # Upload the converted file to Google Drive
-                    try:
-                        drive_service.upload_file(dng_file_path, dng_folder_id)
-                        logging.info(f"Uploaded {dng_file_name} to Google Drive.")
-                    except Exception as e:
-                        logging.error(
-                            f"Failed to upload {dng_file_name} to Google Drive: {e}\n"
-                            + "HINT: Does drive-automation@ucautomation.iam.gserviceaccount.com have permission to access the destination folder?"
-                        )
+    #             if converted:
+    #                 # Get the converted file path
+    #                 dng_file_name = os.path.splitext(file["name"])[0] + ".dng"
+    #                 dng_file_path = os.path.join(output_dir, dng_file_name)
 
-            except Exception as e:
-                logging.error(f"Failed to convert {file['name']}: {e}")
+    #                 # Upload the converted file to Google Drive
+    #                 try:
+    #                     drive_service.upload_file(dng_file_path, dng_folder_id)
+    #                     logging.info(f"Uploaded {dng_file_name} to Google Drive.")
+    #                 except Exception as e:
+    #                     logging.error(
+    #                         f"Failed to upload {dng_file_name} to Google Drive: {e}\n"
+    #                         + "HINT: Does drive-automation@ucautomation.iam.gserviceaccount.com have permission to access the destination folder?"
+    #                     )
 
-    logging.info("Script execution completed.")
+    #         except Exception as e:
+    #             logging.error(f"Failed to convert {file['name']}: {e}")
+
+    # logging.info("Script execution completed.")
 
 
 if __name__ == "__main__":
