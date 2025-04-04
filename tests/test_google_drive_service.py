@@ -8,6 +8,14 @@ from googleapiclient.http import MediaFileUpload
 from google_drive_service import GoogleDriveService
 
 
+@pytest.fixture
+def mock_firestore_service():
+    with patch("google_drive_service.FirestoreService") as mock_firestore_cls:
+        mock_firestore = MagicMock()
+        mock_firestore_cls.return_value = mock_firestore
+        yield mock_firestore
+
+
 def test_list_files():
     folder_id = "test_folder_id"
     mock_credentials = MagicMock()
@@ -25,7 +33,11 @@ def test_list_files():
     with patch(
         "google_drive_service.service_account.Credentials.from_service_account_file",
         return_value=mock_credentials,
-    ), patch("google_drive_service.build", return_value=mock_service):
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
 
         google_drive_service = GoogleDriveService(
             folder_id, credentials_path="mock/path.json"
@@ -58,6 +70,35 @@ def test_list_files():
         )
 
 
+def test_list_files_error():
+    folder_id = "test_folder_id"
+    mock_credentials = MagicMock()
+    mock_service = MagicMock()
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
+
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
+
+        # Simulate an API error
+        mock_service.files.return_value.list.return_value.execute.side_effect = (
+            Exception("API Error")
+        )
+
+        files = google_drive_service.list_files()
+
+        # Should return empty list on error
+        assert files == []
+
+
 def test_download_file():
     folder_id = "test_folder_id"
     mock_credentials = MagicMock()
@@ -75,7 +116,9 @@ def test_download_file():
         "os.makedirs"
     ) as mock_makedirs, patch(
         "os.path.exists", return_value=True
-    ) as mock_exists:
+    ) as mock_exists, patch(
+        "google_drive_service.FirestoreService"
+    ):
 
         google_drive_service = GoogleDriveService(
             folder_id, credentials_path="mock/path.json"
@@ -112,11 +155,9 @@ def test_download_file_failure():
         "google_drive_service.service_account.Credentials.from_service_account_file",
         return_value=mock_credentials,
     ), patch("google_drive_service.build", return_value=mock_service), patch(
-        "builtins.open", mock_open()
+        "os.path.exists", return_value=True
     ), patch(
-        "os.makedirs"
-    ), patch(
-        "os.path.exists", return_value=False
+        "google_drive_service.FirestoreService"
     ):
 
         google_drive_service = GoogleDriveService(
@@ -127,8 +168,9 @@ def test_download_file_failure():
             "File not found"
         )
 
-        with pytest.raises(Exception, match="File not found"):
-            google_drive_service.download_file(file_id, destination)
+        success = google_drive_service.download_file(file_id, destination)
+
+        assert success is False
 
 
 def test_upload_file():
@@ -144,7 +186,11 @@ def test_upload_file():
         return_value=mock_credentials,
     ), patch("google_drive_service.build", return_value=mock_service), patch(
         "google_drive_service.MediaFileUpload"
-    ) as mock_media_file_upload:
+    ) as mock_media_file_upload, patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
 
         google_drive_service = GoogleDriveService(
             folder_id, credentials_path="mock/path.json"
@@ -179,7 +225,11 @@ def test_upload_file_failure():
         return_value=mock_credentials,
     ), patch("google_drive_service.build", return_value=mock_service), patch(
         "google_drive_service.MediaFileUpload"
-    ) as mock_media_file_upload:
+    ) as mock_media_file_upload, patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
 
         google_drive_service = GoogleDriveService(
             folder_id, credentials_path="mock/path.json"
@@ -189,14 +239,86 @@ def test_upload_file_failure():
         mock_media_file_upload.return_value = mock_media
 
         mock_service.files.return_value.create.return_value.execute.side_effect = (
-            HttpError(resp=MagicMock(status=403), content=b"Permission denied")
+            Exception("Upload error")
         )
 
-        with pytest.raises(HttpError, match="Permission denied"):
-            google_drive_service.upload_file(file_path, folder_id)
+        uploaded_file_id = google_drive_service.upload_file(file_path, folder_id)
 
-        mock_service.files.return_value.create.assert_called_once_with(
-            body={"name": os.path.basename(file_path), "parents": [folder_id]},
-            media_body=mock_media,
-            fields="id",
+        assert uploaded_file_id is None
+
+
+def test_upload_nonexistent_file():
+    folder_id = "test_folder_id"
+    mock_credentials = MagicMock()
+
+    file_path = "nonexistent_file.txt"
+
+    # Use a side_effect function to return True for credential path and False for the upload file
+    def path_exists_side_effect(path):
+        if path == "mock/path.json":
+            return True
+        return False
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build"), patch(
+        "os.path.exists", side_effect=path_exists_side_effect
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ), patch(
+        "google_drive_service.load_dotenv"
+    ):
+
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
         )
+
+        uploaded_file_id = google_drive_service.upload_file(file_path, folder_id)
+
+        assert uploaded_file_id is None
+
+
+def test_file_status_methods(mock_firestore_service):
+    folder_id = "test_folder_id"
+    file_id = "test_file_id"
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file"
+    ), patch("google_drive_service.build"), patch("os.path.exists", return_value=True):
+
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
+
+        # Test is_file_processed
+        mock_firestore_service.is_processed.return_value = True
+        assert google_drive_service.is_file_processed(file_id) is True
+        mock_firestore_service.is_processed.assert_called_with(file_id)
+
+        # Test mark_file_as_processing
+        mock_firestore_service.mark_as_processing.return_value = True
+        assert (
+            google_drive_service.mark_file_as_processing(file_id, "test-machine")
+            is True
+        )
+        mock_firestore_service.mark_as_processing.assert_called_with(
+            file_id, "test-machine"
+        )
+
+        # Test mark_file_as_processed
+        data = {"filename": "test.dng"}
+        mock_firestore_service.mark_as_processed.return_value = True
+        assert (
+            google_drive_service.mark_file_as_processed(file_id, "test-machine", data)
+            is True
+        )
+        mock_firestore_service.mark_as_processed.assert_called_with(
+            file_id, "test-machine", data
+        )
+
+        # Test get_file_status
+        status_data = {"status": "processed", "machine_id": "test-machine"}
+        mock_firestore_service.get_file_status.return_value = status_data
+        assert google_drive_service.get_file_status(file_id) == status_data
+        mock_firestore_service.get_file_status.assert_called_with(file_id)
