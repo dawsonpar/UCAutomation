@@ -293,32 +293,41 @@ def test_file_status_methods(mock_firestore_service):
 
         # Test is_file_processed
         mock_firestore_service.is_processed.return_value = True
-        assert google_drive_service.is_file_processed(file_id) is True
+        result = google_drive_service.is_file_processed(file_id)
+        assert result is True
         mock_firestore_service.is_processed.assert_called_with(file_id)
 
         # Test mark_file_as_processing
         mock_firestore_service.mark_as_processing.return_value = True
-        assert (
-            google_drive_service.mark_file_as_processing(file_id, "test-machine")
-            is True
-        )
+        result = google_drive_service.mark_file_as_processing(file_id, "test-machine")
+        assert result is True
         mock_firestore_service.mark_as_processing.assert_called_with(
             file_id, "test-machine"
         )
 
         # Test mark_file_as_processed
-        data = {"filename": "test.dng"}
         mock_firestore_service.mark_as_processed.return_value = True
-        assert (
-            google_drive_service.mark_file_as_processed(file_id, "test-machine", data)
-            is True
+        data = {"filename": "test.dng"}
+        result = google_drive_service.mark_file_as_processed(
+            file_id, "test-machine", data
         )
+        assert result is True
         mock_firestore_service.mark_as_processed.assert_called_with(
             file_id, "test-machine", data
         )
 
+        # Test mark_file_as_failed
+        mock_firestore_service.mark_as_failed.return_value = True
+        result = google_drive_service.mark_file_as_failed(
+            file_id, "test-machine", "Conversion error"
+        )
+        assert result is True
+        mock_firestore_service.mark_as_failed.assert_called_with(
+            file_id, "test-machine", "Conversion error"
+        )
+
         # Test get_file_status
-        status_data = {"status": "processed", "machine_id": "test-machine"}
-        mock_firestore_service.get_file_status.return_value = status_data
-        assert google_drive_service.get_file_status(file_id) == status_data
+        mock_firestore_service.get_file_status.return_value = {"status": "processed"}
+        result = google_drive_service.get_file_status(file_id)
+        assert result == {"status": "processed"}
         mock_firestore_service.get_file_status.assert_called_with(file_id)

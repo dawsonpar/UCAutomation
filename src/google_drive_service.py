@@ -143,6 +143,10 @@ class GoogleDriveService:
             file_id, machine_id, additional_data
         )
 
+    def mark_file_as_failed(self, file_id, machine_id=None, error_message=None):
+        """Mark a file as failed processing in Firestore."""
+        return self.firestore_service.mark_as_failed(file_id, machine_id, error_message)
+
     def get_file_status(self, file_id):
         """Get the processing status of a file from Firestore."""
         return self.firestore_service.get_file_status(file_id)
