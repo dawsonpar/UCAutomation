@@ -146,6 +146,10 @@ cat ~/UCAutomation/lib/rawconverter_error.log
 
 ## Troubleshooting
 
+### Converted file not found
+
+Check the version of Adobe DNG Converter and see if it supports converting the latest raw photos. You may need to redownload the latest version of Adobe DNG Converter.
+
 ### No such file or directory: 'Users/{User}/UCAutomation/lib/rawconverter_out.log'
 
 - Ensure you've created the lib directory as described in step 4.
