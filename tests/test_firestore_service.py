@@ -209,3 +209,76 @@ def test_get_file_status_not_found(mock_firestore):
         result = service.get_file_status("file123")
 
         assert result is None
+
+
+def test_mark_as_failed_new_file(mock_firestore):
+    """Test marking a new file as failed"""
+    # Setup document snapshot behavior for a new file
+    mock_snapshot = MagicMock()
+    mock_snapshot.exists = False
+    mock_firestore["doc"].get.return_value = mock_snapshot
+
+    with patch("os.uname") as mock_uname, patch("os.path.exists", return_value=True):
+        mock_uname.return_value.nodename = "test-machine"
+
+        service = FirestoreService(credentials_path="/fake/path.json")
+        result = service.mark_as_failed("file123", error_message="Conversion failed")
+
+        assert result is True
+        mock_firestore["doc"].set.assert_called_once()
+        args = mock_firestore["doc"].set.call_args[0][0]
+        assert args["status"] == "failed"
+        assert args["machine_id"] == "test-machine"
+        assert args["error_message"] == "Conversion failed"
+        assert args["retry_count"] == 1
+        assert "updated_at" in args
+        assert "failed_at" in args
+
+
+def test_mark_as_failed_with_retry_increment(mock_firestore):
+    """Test marking a file as failed increments retry count"""
+    # Setup document snapshot behavior for a file with existing retry count
+    mock_snapshot = MagicMock()
+    mock_snapshot.exists = True
+    mock_snapshot.to_dict.return_value = {
+        "status": "failed",
+        "retry_count": 2,
+        "machine_id": "test-machine",
+        "updated_at": "2023-01-01T12:00:00",
+    }
+    mock_firestore["doc"].get.return_value = mock_snapshot
+
+    with patch("os.uname") as mock_uname, patch("os.path.exists", return_value=True):
+        mock_uname.return_value.nodename = "test-machine"
+
+        service = FirestoreService(credentials_path="/fake/path.json")
+        result = service.mark_as_failed("file123", error_message="Still failing")
+
+        assert result is True
+        mock_firestore["doc"].set.assert_called_once()
+        args = mock_firestore["doc"].set.call_args[0][0]
+        assert args["status"] == "failed"
+        assert args["retry_count"] == 3  # Should increment from 2 to 3
+        assert args["error_message"] == "Still failing"
+
+
+def test_mark_as_failed_custom_machine_id(mock_firestore):
+    """Test marking a file as failed with custom machine ID"""
+    mock_snapshot = MagicMock()
+    mock_snapshot.exists = False
+    mock_firestore["doc"].get.return_value = mock_snapshot
+
+    with patch("os.path.exists", return_value=True):
+        service = FirestoreService(credentials_path="/fake/path.json")
+        result = service.mark_as_failed(
+            "file123", machine_id="custom-machine", error_message="Upload failed"
+        )
+
+        assert result is True
+        mock_firestore["doc"].set.assert_called_once()
+        args = mock_firestore["doc"].set.call_args[0][0]
+        assert args["status"] == "failed"
+        assert (
+            args["machine_id"] == "custom-machine"
+        )  # Should use the custom machine ID
+        assert args["error_message"] == "Upload failed"

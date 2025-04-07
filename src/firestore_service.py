@@ -81,6 +81,7 @@ class FirestoreService:
                 "status": "processing",
                 "machine_id": machine_id,
                 "updated_at": current_time,
+                "retry_count": 0,
             }
         )
 
@@ -156,3 +157,45 @@ class FirestoreService:
             return None
 
         return doc.to_dict()
+
+    def mark_as_failed(self, file_id, machine_id=None, error_message=None):
+        """Mark a file as failed processing.
+
+        Args:
+            file_id: Google Drive file ID
+            machine_id: Identifier for the machine that failed processing
+            error_message: Optional error message describing the failure
+
+        Returns:
+            bool: True if successfully marked as failed
+        """
+        doc_ref = self.collection.document(file_id)
+
+        # Get machine ID (hostname if not provided)
+        if not machine_id:
+            machine_id = os.uname().nodename
+
+        current_time = datetime.now().isoformat()
+
+        # Get current retry count
+        doc = doc_ref.get()
+        retry_count = 0
+        if doc.exists:
+            data = doc.to_dict()
+            retry_count = data.get("retry_count", 0)
+
+        data = {
+            "status": "failed",
+            "machine_id": machine_id,
+            "updated_at": current_time,
+            "failed_at": current_time,
+            "retry_count": retry_count + 1,
+        }
+
+        if error_message:
+            data["error_message"] = error_message
+
+        doc_ref.set(data)
+
+        logging.error(f"Marked file {file_id} as failed by {machine_id}")
+        return True
