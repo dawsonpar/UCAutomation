@@ -5,7 +5,7 @@
 - Mac machine
 - Pyenv installed
 - Python >= 3.13.1
-- Adobe DNG Converter installed
+- Adobe DNG Converter 17.2.0 installed
 - Google Drive API credentials (credentials.json file)
 
 ## 1. Download and Setup
