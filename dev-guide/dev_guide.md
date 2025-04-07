@@ -93,8 +93,8 @@ touch .env
 
 ```
 # Google Service Account Credentials Path
-GOOGLE_CREDENTIALS_PATH="~/UCAutomation/credentials.json"
-FIREBASE_CREDENTIALS_PATH="~/UCAutomation/credentials.json"
+GOOGLE_CREDENTIALS_PATH="/replace/path/to/UCAutomation/credentials.json"
+FIREBASE_CREDENTIALS_PATH="/replace/path/to/credentials.json"
 
 # Google Drive IDs
 INGEST_FOLDER_ID="your_ingest_folder_id_here"
@@ -144,6 +144,12 @@ cat ~/UCAutomation/lib/rawconverter_out.log
 cat ~/UCAutomation/lib/rawconverter_error.log
 ```
 
+3. Check if LaunchD file is running:
+
+```bash
+launchctl list | grep rawconverter
+```
+
 ## Troubleshooting
 
 ### Converted file not found
@@ -157,11 +163,6 @@ Check the version of Adobe DNG Converter and see if it supports converting the l
 ### Script doesn't have the credentials to run
 
 - Verify your credentials.json file exists and the path in .env is correct
-- Ensure the environment variables are properly set with:
-
-```bash
-export GOOGLE_CREDENTIALS_PATH="~/UCAutomation/credentials.json"
-```
 
 ### 404 Error when trying to upload to folder
 
