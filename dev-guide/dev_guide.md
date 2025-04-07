@@ -70,6 +70,11 @@ pyenv local ucauto
 ```bash
 pip install -r src/requirements.txt
 ```
+or
+```bash
+pip3 install -r src/requirements.txt
+```
+
 
 ## 4. Create Required Directories
 
