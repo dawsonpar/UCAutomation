@@ -58,6 +58,13 @@ class RawFileConverter:
                 file_id, machine_id, additional_data
             )
 
+    def mark_as_failed(self, file_id, error_message=None, machine_id=None):
+        """Mark a file as failed and update Firestore."""
+        with self.lock:
+            return self.firestore_service.mark_as_failed(
+                file_id, error_message, machine_id
+            )
+
     def convert(self, file_path, output_dir, file_id=None, already_marked=False):
         """Convert a raw file to DNG format
 
@@ -99,6 +106,7 @@ class RawFileConverter:
         if not os.path.exists(converter_path):
             error_message = f"Adobe DNG Converter not found at {converter_path}"
             logging.error(error_message)
+            self.mark_as_failed(file_id, error_message)
             raise FileNotFoundError(error_message)
 
         command = [converter_path, "-c", "-s", "-d", output_dir, file_path]
@@ -109,12 +117,37 @@ class RawFileConverter:
                 dng_file_name = os.path.splitext(file_name)[0] + ".dng"
                 dng_file_path = os.path.join(output_dir, dng_file_name)
 
+                # Verify the file was actually created
+                if not os.path.exists(dng_file_path):
+                    error_message = (
+                        f"DNG file not found after conversion: {dng_file_path}"
+                    )
+                    logging.error(error_message)
+                    self.mark_as_failed(file_id, error_message)
+                    return False
+
                 logging.info(f"Successfully converted {file_path} to DNG.")
+
+                # Mark as processed with relevant metadata
+                additional_data = {
+                    "original_filename": file_name,
+                    "converted_filename": dng_file_name,
+                    "dng_file_path": dng_file_path,
+                }
+                self.mark_as_processed(file_id, additional_data)
+
                 return True
             else:
                 error_message = f"Error converting {file_path}: {result.stderr}"
                 logging.error(error_message)
+                self.mark_as_failed(file_id, error_message)
                 raise RuntimeError(error_message)
         except Exception as e:
-            logging.error(f"Exception while converting {file_path}: {str(e)}")
+            error_message = f"Exception while converting {file_path}: {str(e)}"
+            logging.error(error_message)
+
+            # Only mark as failed if it's not already a RuntimeError from above
+            if not isinstance(e, RuntimeError) or "Error converting" not in str(e):
+                self.mark_as_failed(file_id, error_message)
+
             raise
