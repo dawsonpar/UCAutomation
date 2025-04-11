@@ -3,7 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from main import MAX_RETRIES, process_file
+from utils import process_file
+
+# Define MAX_RETRIES to match the value in utils.py process_file function
+MAX_RETRIES = 3
 
 
 @pytest.fixture
