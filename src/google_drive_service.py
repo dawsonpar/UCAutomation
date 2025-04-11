@@ -48,6 +48,64 @@ class GoogleDriveService:
             collection_name=collection_name, credentials_path=firebase_credentials_path
         )
 
+    def get_storage_quota(self):
+        """Retrieves storage quota information for the service account.
+
+        Returns:
+            dict: A dictionary containing the following quota information:
+                - limit: Total quota in bytes
+                - usage: Current usage in bytes
+                - usage_in_drive: Usage in Drive in bytes
+                - usage_in_drive_trash: Usage in Drive trash in bytes
+                - usage_percentage: Percentage of quota used (0-100)
+                - remaining: Remaining quota in bytes
+                - remaining_readable: Remaining quota in human-readable format
+            None: If an error occurred
+        """
+        try:
+            about = self.service.about().get(fields="storageQuota").execute()
+            storage_quota = about.get("storageQuota", {})
+
+            # Extract quota information
+            limit = int(storage_quota.get("limit", 0))
+            usage = int(storage_quota.get("usage", 0))
+            usage_in_drive = int(storage_quota.get("usageInDrive", 0))
+            usage_in_drive_trash = int(storage_quota.get("usageInDriveTrash", 0))
+
+            # Calculate percentage and remaining
+            usage_percentage = (usage / limit * 100) if limit > 0 else 0
+            remaining = limit - usage
+
+            # Convert remaining bytes to human-readable format
+            units = ["B", "KB", "MB", "GB", "TB"]
+            remaining_readable = ""
+            if remaining > 0:
+                i = 0
+                remaining_size = float(remaining)
+                while remaining_size >= 1024 and i < len(units) - 1:
+                    remaining_size /= 1024
+                    i += 1
+                remaining_readable = f"{remaining_size:.2f} {units[i]}"
+
+            # Log quota information
+            logging.info(
+                f"Drive storage quota: {usage / (1024 * 1024 * 1024):.2f} GB used out of {limit / (1024 * 1024 * 1024):.2f} GB"
+            )
+
+            return {
+                "limit": limit,
+                "usage": usage,
+                "usage_in_drive": usage_in_drive,
+                "usage_in_drive_trash": usage_in_drive_trash,
+                "usage_percentage": usage_percentage,
+                "remaining": remaining,
+                "remaining_readable": remaining_readable,
+            }
+
+        except Exception as e:
+            logging.error(f"Error getting Drive storage quota: {str(e)}")
+            return None
+
     def list_files(self, folder_id=None, depth=0):
         if folder_id is None:
             folder_id = self.folder_id

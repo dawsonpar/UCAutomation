@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 
@@ -156,6 +157,33 @@ def main():
             folder_id=folder_id,
             credentials_path=google_creds_path,
             firebase_credentials_path=firebase_creds_path,
+        )
+
+        # Check storage quota before proceeding
+        quota_info = drive_service.get_storage_quota()
+        if not quota_info:
+            logging.error("Failed to retrieve Drive storage quota information")
+            return
+
+        # Define a threshold for warning (90% of quota used)
+        quota_threshold = 90.0
+        if quota_info["usage_percentage"] > quota_threshold:
+            logging.error(
+                f"Drive storage quota critical: {quota_info['usage_percentage']:.2f}% used "
+                f"({quota_info['usage'] / (1024 * 1024 * 1024):.2f} GB of {quota_info['limit'] / (1024 * 1024 * 1024):.2f} GB). "
+                "Processing halted to prevent quota exceeded errors."
+            )
+            # Provide suggestions for clearing space
+            logging.warning(
+                "To free up space: 1) Empty trash 2) Delete unnecessary files "
+                "3) Consider using a different service account"
+            )
+            return
+
+        # Log current quota status
+        logging.info(
+            f"Drive storage status: {quota_info['usage_percentage']:.2f}% used "
+            f"({quota_info['usage'] / (1024 * 1024 * 1024):.2f} GB of {quota_info['limit'] / (1024 * 1024 * 1024):.2f} GB)"
         )
 
         # Initialize the RawFileConverter with the same Firestore service
