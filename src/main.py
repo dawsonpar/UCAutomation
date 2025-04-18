@@ -1,6 +1,4 @@
-import logging
 import os
-import sys
 
 from dotenv import load_dotenv
 
@@ -34,7 +32,7 @@ def main():
         missing_vars.append("FIREBASE_CREDENTIALS_PATH")
 
     if missing_vars:
-        logging.error(
+        logger.error(
             f"Missing required environment variables: {', '.join(missing_vars)}"
         )
         return
@@ -49,7 +47,7 @@ def main():
         os.makedirs(download_dir, exist_ok=True)
         os.makedirs(output_dir, exist_ok=True)
     except Exception as e:
-        logging.error(f"Failed to create directories: {e}")
+        logger.error(f"Failed to create directories: {e}")
         return
 
     try:
@@ -70,10 +68,10 @@ def main():
 
         # Get machine identifier for tracking
         machine_id = os.uname().nodename
-        logging.info(f"Running on machine: {machine_id}")
+        logger.info(f"Running on machine: {machine_id}")
 
         # Fetch files from Google Drive
-        logging.info("Fetching file list from Google Drive")
+        logger.info("Fetching file list from Google Drive")
         files = drive_service.list_files()
 
         # Filter for raw files
@@ -82,7 +80,7 @@ def main():
             for file in files
             if file["name"].lower().endswith((".cr3", ".arw", ".nef"))
         ]
-        logging.info(f"Found {len(raw_files)} raw files to process")
+        logger.info(f"Found {len(raw_files)} raw files to process")
 
         # Process each file
         for file in raw_files:
@@ -97,9 +95,9 @@ def main():
             )
 
     except Exception as e:
-        logging.error(f"An error occurred in the main script: {str(e)}")
+        logger.error(f"An error occurred in the main script: {str(e)}")
 
-    logging.info("Script execution completed")
+    logger.info("Script execution completed")
 
 
 if __name__ == "__main__":
