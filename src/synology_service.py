@@ -1,17 +1,10 @@
-import logging
 import os
 import shutil
 
 from firestore_service import FirestoreService
+from log_config import get_logger
 
-# Configure logging
-log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+logger = get_logger()
 
 
 class SynologyService:
@@ -26,7 +19,7 @@ class SynologyService:
     def upload_file(self, file_path, folder_path):
         """Uploads a file to Synology NAS."""
         if not os.path.exists(file_path):
-            logging.error(f"File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             return None
 
         try:
@@ -38,8 +31,8 @@ class SynologyService:
                 file_path, os.path.join(folder_path, os.path.basename(file_path))
             )
 
-            logging.info(f"Uploaded {file_path} to {folder_path}")
+            logger.info(f"Uploaded {file_path} to {folder_path}")
             return True
         except Exception as e:
-            logging.error(f"Error uploading {file_path}: {str(e)}")
+            logger.error(f"Error uploading {file_path}: {str(e)}")
             return False
