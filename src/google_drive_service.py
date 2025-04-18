@@ -7,15 +7,9 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from firestore_service import FirestoreService
+from log_config import get_logger
 
-# Configure logging
-log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+logger = get_logger()
 
 
 class GoogleDriveService:
@@ -88,7 +82,7 @@ class GoogleDriveService:
                 remaining_readable = f"{remaining_size:.2f} {units[i]}"
 
             # Log quota information
-            logging.info(
+            logger.info(
                 f"Drive storage quota: {usage / (1024 * 1024 * 1024):.2f} GB used out of {limit / (1024 * 1024 * 1024):.2f} GB"
             )
 
@@ -103,7 +97,7 @@ class GoogleDriveService:
             }
 
         except Exception as e:
-            logging.error(f"Error getting Drive storage quota: {str(e)}")
+            logger.error(f"Error getting Drive storage quota: {str(e)}")
             return None
 
     def list_files(self, folder_id=None, depth=0):
@@ -120,7 +114,7 @@ class GoogleDriveService:
                 .execute()
             )
         except Exception as e:
-            logging.error(f"Error listing files in folder {folder_id}: {str(e)}")
+            logger.error(f"Error listing files in folder {folder_id}: {str(e)}")
             return []
 
         files = results.get("files", [])
@@ -128,7 +122,7 @@ class GoogleDriveService:
 
         for file in files:
             indent = "  " * depth
-            logging.info(f"{indent}- {file['name']} (ID: {file['id']})")
+            logger.info(f"{indent}- {file['name']} (ID: {file['id']})")
 
             all_files.append(file)
 
@@ -153,7 +147,7 @@ class GoogleDriveService:
 
             return os.path.exists(destination)
         except Exception as e:
-            logging.error(f"Error downloading file {file_id}: {str(e)}")
+            logger.error(f"Error downloading file {file_id}: {str(e)}")
             return False
 
     def upload_file(self, file_path, folder_id=None):
@@ -162,7 +156,7 @@ class GoogleDriveService:
             folder_id = self.folder_id
 
         if not os.path.exists(file_path):
-            logging.error(f"File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             return None
 
         try:
@@ -179,12 +173,12 @@ class GoogleDriveService:
                 .execute()
             )
 
-            logging.info(
+            logger.info(
                 f"Uploaded {file_path} to Google Drive with ID: {file.get('id')}"
             )
             return file.get("id")
         except Exception as e:
-            logging.error(f"Error uploading file {file_path}: {str(e)}")
+            logger.error(f"Error uploading file {file_path}: {str(e)}")
             return None
 
     def is_file_processed(self, file_id):

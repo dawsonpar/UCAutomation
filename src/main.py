@@ -5,22 +5,16 @@ import sys
 from dotenv import load_dotenv
 
 from google_drive_service import GoogleDriveService
+from log_config import get_logger
 from raw_converter import RawFileConverter
 from utils import get_quota, get_quota_threshold, process_file
 
-# Configure logging
-log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+logger = get_logger()
 
 
 def main():
     load_dotenv()
-    logging.info("Starting raw converter")
+    logger.info("Starting raw converter")
 
     # Get required environment variables
     folder_id = os.environ.get("INGEST_FOLDER_ID")

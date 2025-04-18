@@ -6,16 +6,11 @@ from dotenv import load_dotenv
 from google.cloud import firestore
 from google.oauth2 import service_account
 
+from log_config import get_logger
+
 load_dotenv()
 
-# Configure logging
-log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+logger = get_logger()
 
 
 class FirestoreService:
@@ -70,7 +65,7 @@ class FirestoreService:
             if data.get("status") == "processing":
                 processing_time = data.get("updated_at")
                 machine = data.get("machine_id")
-                logging.info(
+                logger.info(
                     f"File {file_id} is already being processed by {machine} since {processing_time}"
                 )
                 return False
@@ -85,7 +80,7 @@ class FirestoreService:
             }
         )
 
-        logging.info(f"Marked file {file_id} as processing by {machine_id}")
+        logger.info(f"Marked file {file_id} as processing by {machine_id}")
         return True
 
     def mark_as_processed(self, file_id, machine_id=None, additional_data=None):
@@ -120,7 +115,7 @@ class FirestoreService:
 
         doc_ref.set(data)
 
-        logging.info(f"Marked file {file_id} as processed by {machine_id}")
+        logger.info(f"Marked file {file_id} as processed by {machine_id}")
         return True
 
     def is_processed(self, file_id):
@@ -197,5 +192,5 @@ class FirestoreService:
 
         doc_ref.set(data)
 
-        logging.error(f"Marked file {file_id} as failed by {machine_id}")
+        logger.error(f"Marked file {file_id} as failed by {machine_id}")
         return True

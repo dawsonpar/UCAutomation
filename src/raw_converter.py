@@ -4,15 +4,9 @@ import subprocess
 import threading
 
 from firestore_service import FirestoreService
+from log_config import get_logger
 
-# Configure logging
-log_file = os.path.expanduser("~/UCAutomation/lib/rawconverter_out.log")
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+logger = get_logger()
 
 
 class RawFileConverter:
@@ -88,12 +82,12 @@ class RawFileConverter:
 
         # Check if already processed
         if self.is_processed(file_id):
-            logging.info(f"Skipping {file_name}, already processed.")
+            logger.info(f"Skipping {file_name}, already processed.")
             return False
 
         # Try to mark file as processing, return if already being processed
         if not already_marked and not self.mark_as_processing(file_id):
-            logging.info(
+            logger.info(
                 f"Skipping {file_name}, already being processed by another machine."
             )
             return False
@@ -105,7 +99,7 @@ class RawFileConverter:
         # Check if converter exists
         if not os.path.exists(converter_path):
             error_message = f"Adobe DNG Converter not found at {converter_path}"
-            logging.error(error_message)
+            logger.error(error_message)
             self.mark_as_failed(file_id, error_message)
             raise FileNotFoundError(error_message)
 
@@ -122,11 +116,11 @@ class RawFileConverter:
                     error_message = (
                         f"DNG file not found after conversion: {dng_file_path}"
                     )
-                    logging.error(error_message)
+                    logger.error(error_message)
                     self.mark_as_failed(file_id, error_message)
                     return False
 
-                logging.info(f"Successfully converted {file_path} to DNG.")
+                logger.info(f"Successfully converted {file_path} to DNG.")
 
                 # Mark as processed with relevant metadata
                 additional_data = {
@@ -139,12 +133,12 @@ class RawFileConverter:
                 return True
             else:
                 error_message = f"Error converting {file_path}: {result.stderr}"
-                logging.error(error_message)
+                logger.error(error_message)
                 self.mark_as_failed(file_id, error_message)
                 raise RuntimeError(error_message)
         except Exception as e:
             error_message = f"Exception while converting {file_path}: {str(e)}"
-            logging.error(error_message)
+            logger.error(error_message)
 
             # Only mark as failed if it's not already a RuntimeError from above
             if not isinstance(e, RuntimeError) or "Error converting" not in str(e):

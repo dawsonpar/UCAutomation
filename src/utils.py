@@ -10,6 +10,9 @@ import sys
 from dotenv import load_dotenv
 
 from google_drive_service import GoogleDriveService
+from log_config import get_logger
+
+logger = get_logger()
 
 
 def format_size(size_bytes):
@@ -109,24 +112,24 @@ def get_quota_threshold(quota_info, threshold=90.0):
         bool: True if quota is below threshold, False if quota exceeds threshold
     """
     if not quota_info:
-        logging.error("Failed to retrieve Drive storage quota information")
+        logger.error("Failed to retrieve Drive storage quota information")
         return False
 
     # Log current quota status
-    logging.info(
+    logger.info(
         f"Drive storage status: {quota_info['usage_percentage']:.2f}% used "
         f"({quota_info['usage'] / (1024 * 1024 * 1024):.2f} GB of {quota_info['limit'] / (1024 * 1024 * 1024):.2f} GB)"
     )
 
     # Check if quota exceeds threshold
     if quota_info["usage_percentage"] > threshold:
-        logging.error(
+        logger.error(
             f"Drive storage quota critical: {quota_info['usage_percentage']:.2f}% used "
             f"({quota_info['usage'] / (1024 * 1024 * 1024):.2f} GB of {quota_info['limit'] / (1024 * 1024 * 1024):.2f} GB). "
             "Processing halted to prevent quota exceeded errors."
         )
         # Provide suggestions for clearing space
-        logging.warning(
+        logger.warning(
             "To free up space: 1) Empty trash 2) Delete unnecessary files "
             "3) Consider using a different service account"
         )
@@ -147,7 +150,7 @@ def process_file(
 
     # Skip if already processed successfully
     if drive_service.is_file_processed(file_id):
-        logging.info(f"Skipping {file_name} (ID: {file_id}), already processed")
+        logger.info(f"Skipping {file_name} (ID: {file_id}), already processed")
         return True
 
     # Get current status
@@ -155,14 +158,14 @@ def process_file(
     if status:
         retry_count = status.get("retry_count", 0)
         if status.get("status") == "failed" and retry_count >= MAX_RETRIES:
-            logging.warning(
+            logger.warning(
                 f"Skipping {file_name} (ID: {file_id}), max retries exceeded"
             )
             return False
 
     # Try to mark as processing
     if not drive_service.mark_file_as_processing(file_id, machine_id):
-        logging.info(
+        logger.info(
             f"Skipping {file_name} (ID: {file_id}), already being processed by another machine"
         )
         return False
@@ -171,13 +174,13 @@ def process_file(
     local_path = os.path.join(download_dir, file_name)
     if not drive_service.download_file(file_id, local_path):
         error_msg = f"Failed to download {file_name} (ID: {file_id})"
-        logging.error(error_msg)
+        logger.error(error_msg)
         drive_service.mark_file_as_failed(
             file_id=file_id, machine_id=machine_id, error_message=error_msg
         )
         return False
 
-    logging.info(f"Downloaded: {file_name} to {local_path}")
+    logger.info(f"Downloaded: {file_name} to {local_path}")
 
     # Convert the file
     try:
@@ -186,7 +189,7 @@ def process_file(
         )
         if not converted:
             error_msg = f"Failed to convert {file_name}"
-            logging.error(error_msg)
+            logger.error(error_msg)
             drive_service.mark_file_as_failed(
                 file_id=file_id, machine_id=machine_id, error_message=error_msg
             )
@@ -200,13 +203,13 @@ def process_file(
         uploaded_id = drive_service.upload_file(dng_file_path, dng_folder_id)
         if not uploaded_id:
             error_msg = f"Failed to upload {dng_file_name} to Google Drive"
-            logging.error(error_msg)
+            logger.error(error_msg)
             drive_service.mark_file_as_failed(
                 file_id=file_id, machine_id=machine_id, error_message=error_msg
             )
             return False
 
-        logging.info(f"Uploaded {dng_file_name} to Google Drive with ID: {uploaded_id}")
+        logger.info(f"Uploaded {dng_file_name} to Google Drive with ID: {uploaded_id}")
 
         # Mark as fully processed with additional info
         drive_service.mark_file_as_processed(
@@ -222,7 +225,7 @@ def process_file(
 
     except Exception as e:
         error_msg = f"Failed to process {file_name}: {str(e)}"
-        logging.error(error_msg)
+        logger.error(error_msg)
         drive_service.mark_file_as_failed(
             file_id=file_id, machine_id=machine_id, error_message=error_msg
         )
