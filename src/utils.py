@@ -5,7 +5,10 @@ Utility functions for the UCAutomation project
 
 import logging
 import os
+import shutil
 import sys
+import time
+from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 
@@ -230,3 +233,94 @@ def process_file(
             file_id=file_id, machine_id=machine_id, error_message=error_msg
         )
         return False
+
+
+def clean_download_directories(base_dir=None, days_threshold=7):
+    """
+    Clean download and output directories if they're older than the specified threshold.
+
+    Args:
+        base_dir (str, optional): Base directory path. If None, uses ~/UCAutomation.
+        days_threshold (int, optional): Number of days to keep files. Defaults to 7.
+
+    Returns:
+        tuple: (raw_cleaned, dng_cleaned) - Number of files cleaned from each directory
+    """
+    try:
+        if not base_dir:
+            home_dir = os.path.expanduser("~")
+            base_dir = os.path.join(home_dir, "UCAutomation")
+
+        download_dir = os.path.join(base_dir, "downloads/raw_files")
+        output_dir = os.path.join(base_dir, "downloads/dng_files")
+
+        marker_file = os.path.join(base_dir, ".last_cleanup")
+
+        cleanup_needed = True
+        if os.path.exists(marker_file):
+            with open(marker_file, "r") as f:
+                try:
+                    last_cleanup = datetime.fromtimestamp(float(f.read().strip()))
+                    days_since_cleanup = (datetime.now() - last_cleanup).days
+                    if days_since_cleanup < days_threshold:
+                        logger.info(
+                            f"Last cleanup was {days_since_cleanup} days ago. Skipping."
+                        )
+                        cleanup_needed = False
+                except (ValueError, OSError) as e:
+                    logger.warning(
+                        f"Could not read last cleanup time: {e}. Will clean directories."
+                    )
+
+        if not cleanup_needed:
+            return (0, 0)
+
+        cutoff_time = time.time() - (days_threshold * 24 * 60 * 60)
+
+        # Define directories to clean with their counters
+        directories = [
+            (download_dir, "raw files", 0),  # (directory_path, description, counter)
+            (output_dir, "DNG files", 0),
+        ]
+
+        # Process all directories using the same code
+        for dir_path, dir_desc, _ in directories:
+            if os.path.exists(dir_path):
+                logger.info(f"Cleaning {dir_desc} directory: {dir_path}")
+                for item in os.listdir(dir_path):
+                    item_path = os.path.join(dir_path, item)
+                    if os.path.isfile(item_path):
+                        file_time = os.path.getmtime(item_path)
+                        if file_time < cutoff_time:
+                            try:
+                                os.remove(item_path)
+                                idx = directories.index((dir_path, dir_desc, _))
+                                directories[idx] = (
+                                    dir_path,
+                                    dir_desc,
+                                    directories[idx][2] + 1,
+                                )
+                            except OSError as e:
+                                logger.error(f"Error removing {item_path}: {e}")
+
+        # Extract counters from the directories list
+        raw_files_removed = directories[0][2]
+        dng_files_removed = directories[1][2]
+
+        # Update marker file with current timestamp
+        with open(marker_file, "w") as f:
+            f.write(str(time.time()))
+
+        total_removed = raw_files_removed + dng_files_removed
+        if total_removed > 0:
+            logger.info(
+                f"Cleanup complete: {raw_files_removed} raw files and {dng_files_removed} DNG files removed"
+            )
+        else:
+            logger.info("No files needed cleanup")
+
+        return (raw_files_removed, dng_files_removed)
+
+    except Exception as e:
+        logger.error(f"Error during directory cleanup: {e}")
+        return (0, 0)

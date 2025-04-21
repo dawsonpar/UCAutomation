@@ -5,7 +5,12 @@ from dotenv import load_dotenv
 from google_drive_service import GoogleDriveService
 from log_config import get_logger
 from raw_converter import RawFileConverter
-from utils import get_quota, get_quota_threshold, process_file
+from utils import (
+    clean_download_directories,
+    get_quota,
+    get_quota_threshold,
+    process_file,
+)
 
 logger = get_logger()
 
@@ -49,6 +54,11 @@ def main():
     except Exception as e:
         logger.error(f"Failed to create directories: {e}")
         return
+
+    # Clean up old files in download directories
+    raw_cleaned, dng_cleaned = clean_download_directories(base_dir)
+    if raw_cleaned > 0 or dng_cleaned > 0:
+        logger.info(f"Cleaned up {raw_cleaned} raw files and {dng_cleaned} DNG files")
 
     try:
         # Initialize Google Drive service with Firestore integration

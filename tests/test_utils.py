@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import time
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -533,3 +534,277 @@ class TestProcessFile:
             "Test error"
             in mock_drive_service.mark_file_as_failed.call_args[1]["error_message"]
         )
+
+
+class TestCleanDownloadDirectories:
+    """Tests for clean_download_directories function"""
+
+    @patch("utils.os.path.expanduser")
+    @patch("utils.os.path.exists")
+    @patch("utils.os.path.isfile")
+    @patch("utils.os.path.getmtime")
+    @patch("utils.os.remove")
+    @patch("utils.os.listdir")
+    @patch("utils.time.time")
+    @patch("utils.open", new_callable=mock_open)
+    @patch("utils.logger")
+    def test_files_deleted_past_cutoff(
+        self,
+        mock_logger,
+        mock_open,
+        mock_time,
+        mock_listdir,
+        mock_remove,
+        mock_getmtime,
+        mock_isfile,
+        mock_exists,
+        mock_expanduser,
+    ):
+        """Test files older than the cutoff time are correctly deleted"""
+        # Setup mocks
+        mock_expanduser.return_value = "/home/testuser"
+
+        # Make sure .last_cleanup doesn't exist but directories do
+        def exists_side_effect(path):
+            if path == "/home/testuser/UCAutomation/.last_cleanup":
+                return False
+            return True
+
+        mock_exists.side_effect = exists_side_effect
+
+        # All paths are files for this test
+        mock_isfile.return_value = True
+
+        # Current time (e.g., 10 days since epoch)
+        current_time = 10 * 24 * 60 * 60
+        mock_time.return_value = current_time
+
+        # Return different directories with test files
+        def listdir_side_effect(path):
+            if path == "/home/testuser/UCAutomation/downloads/raw_files":
+                return ["old_file1.cr3", "recent_file.cr3"]
+            elif path == "/home/testuser/UCAutomation/downloads/dng_files":
+                return ["old_file2.dng"]
+            return []
+
+        mock_listdir.side_effect = listdir_side_effect
+
+        # Set file modification times (8 days old and 2 days old)
+        old_time = current_time - (8 * 24 * 60 * 60)  # 8 days old
+        recent_time = current_time - (2 * 24 * 60 * 60)  # 2 days old
+
+        def get_mtime(path):
+            if "old_file" in path:
+                return old_time
+            return recent_time
+
+        mock_getmtime.side_effect = get_mtime
+
+        # Call function
+        result = utils.clean_download_directories(
+            base_dir="/home/testuser/UCAutomation"
+        )
+
+        # Verify results
+        assert result == (1, 1)  # One raw file and one DNG file removed
+
+        mock_remove.assert_any_call(
+            "/home/testuser/UCAutomation/downloads/raw_files/old_file1.cr3"
+        )
+        mock_remove.assert_any_call(
+            "/home/testuser/UCAutomation/downloads/dng_files/old_file2.dng"
+        )
+        assert mock_remove.call_count == 2
+
+        # Verify the marker file was written with the current time
+        mock_open.assert_called_with("/home/testuser/UCAutomation/.last_cleanup", "w")
+        mock_open().write.assert_called_with(str(current_time))
+
+        # Verify logging
+        mock_logger.info.assert_any_call(
+            "Cleaning raw files directory: /home/testuser/UCAutomation/downloads/raw_files"
+        )
+        mock_logger.info.assert_any_call(
+            "Cleaning DNG files directory: /home/testuser/UCAutomation/downloads/dng_files"
+        )
+        mock_logger.info.assert_any_call(
+            "Cleanup complete: 1 raw files and 1 DNG files removed"
+        )
+
+    @patch("utils.os.path.expanduser")
+    @patch("utils.os.path.exists")
+    @patch("utils.open", new_callable=mock_open)
+    @patch("utils.logger")
+    def test_skip_cleanup_if_recent(
+        self, mock_logger, mock_open, mock_exists, mock_expanduser
+    ):
+        """Test cleanup is skipped if last cleanup was recent"""
+        # Setup mocks
+        mock_expanduser.return_value = "/home/testuser"
+        mock_exists.return_value = True
+
+        # Mock reading the last cleanup time (3 days ago)
+        current_time = time.time()
+        three_days_ago = current_time - (3 * 24 * 60 * 60)
+        mock_open().read.return_value = str(three_days_ago)
+
+        # Call function with default 7-day threshold
+        result = utils.clean_download_directories()
+
+        # Verify cleanup was skipped
+        assert result == (0, 0)
+        mock_logger.info.assert_any_call("Last cleanup was 3 days ago. Skipping.")
+
+    @patch("utils.os.path.expanduser")
+    @patch("utils.os.path.exists")
+    @patch("utils.os.path.isfile")
+    @patch("utils.os.path.getmtime")
+    @patch("utils.os.remove")
+    @patch("utils.os.listdir")
+    @patch("utils.time.time")
+    @patch("utils.open", new_callable=mock_open)
+    @patch("utils.logger")
+    def test_files_at_exact_cutoff_threshold(
+        self,
+        mock_logger,
+        mock_open,
+        mock_time,
+        mock_listdir,
+        mock_remove,
+        mock_getmtime,
+        mock_isfile,
+        mock_exists,
+        mock_expanduser,
+    ):
+        """Test that files exactly at the cutoff threshold are handled correctly"""
+        # Setup mocks
+        mock_expanduser.return_value = "/home/testuser"
+
+        def exists_side_effect(path):
+            if path == "/home/testuser/UCAutomation/.last_cleanup":
+                return False
+            return True
+
+        mock_exists.side_effect = exists_side_effect
+
+        mock_isfile.return_value = True
+
+        days_threshold = 7
+        current_time = 100 * 24 * 60 * 60  # 100 days since epoch
+        cutoff_time = current_time - (days_threshold * 24 * 60 * 60)
+        mock_time.return_value = current_time
+
+        def listdir_side_effect(path):
+            if path == "/home/testuser/UCAutomation/downloads/raw_files":
+                return [
+                    "exact_cutoff.cr3",
+                    "just_before_cutoff.cr3",
+                    "just_after_cutoff.cr3",
+                ]
+            elif path == "/home/testuser/UCAutomation/downloads/dng_files":
+                return ["exact_cutoff.dng", "newer_file.dng"]
+            return []
+
+        mock_listdir.side_effect = listdir_side_effect
+
+        # Set file modification times
+        def get_mtime(path):
+            if "exact_cutoff" in path:
+                return cutoff_time  # Exactly at cutoff threshold
+            elif "just_before_cutoff" in path:
+                return cutoff_time - 1  # 1 second before cutoff (should be deleted)
+            elif "just_after_cutoff" in path:
+                return cutoff_time + 1  # 1 second after cutoff (should be kept)
+            else:
+                return current_time  # New file
+
+        mock_getmtime.side_effect = get_mtime
+
+        result = utils.clean_download_directories(
+            base_dir="/home/testuser/UCAutomation", days_threshold=days_threshold
+        )
+
+        assert result == (1, 0)
+
+        mock_remove.assert_called_once_with(
+            "/home/testuser/UCAutomation/downloads/raw_files/just_before_cutoff.cr3"
+        )
+
+        assert not any(
+            call[0][0].endswith("exact_cutoff.cr3")
+            for call in mock_remove.call_args_list
+        )
+        assert not any(
+            call[0][0].endswith("exact_cutoff.dng")
+            for call in mock_remove.call_args_list
+        )
+
+        mock_logger.info.assert_any_call(
+            "Cleaning raw files directory: /home/testuser/UCAutomation/downloads/raw_files"
+        )
+        mock_logger.info.assert_any_call(
+            "Cleaning DNG files directory: /home/testuser/UCAutomation/downloads/dng_files"
+        )
+        mock_logger.info.assert_any_call(
+            "Cleanup complete: 1 raw files and 0 DNG files removed"
+        )
+
+    @patch("utils.os.path.expanduser")
+    @patch("utils.os.path.exists")
+    @patch("utils.os.listdir")
+    @patch("utils.time.time")
+    @patch("utils.open", new_callable=mock_open)
+    @patch("utils.logger")
+    def test_directories_dont_exist(
+        self,
+        mock_logger,
+        mock_open,
+        mock_time,
+        mock_listdir,
+        mock_exists,
+        mock_expanduser,
+    ):
+        """Test when download directories don't exist at all"""
+        # Setup mocks
+        mock_expanduser.return_value = "/home/testuser"
+
+        # Set current time
+        current_time = 100 * 24 * 60 * 60  # 100 days since epoch
+        mock_time.return_value = current_time
+
+        # Make directories not exist
+        def exists_side_effect(path):
+            if path == "/home/testuser/UCAutomation/.last_cleanup":
+                return False
+            if (
+                path == "/home/testuser/UCAutomation/downloads/raw_files"
+                or path == "/home/testuser/UCAutomation/downloads/dng_files"
+            ):
+                return False
+            return True
+
+        mock_exists.side_effect = exists_side_effect
+
+        # Call function
+        result = utils.clean_download_directories(
+            base_dir="/home/testuser/UCAutomation"
+        )
+
+        # Verify results
+        assert result == (0, 0)  # No files removed as directories don't exist
+
+        # Verify os.listdir was never called
+        mock_listdir.assert_not_called()
+
+        # Verify the marker file was still written with the current time
+        mock_open.assert_called_with("/home/testuser/UCAutomation/.last_cleanup", "w")
+        mock_open().write.assert_called_with(str(current_time))
+
+        # Verify logging - should not see messages about cleaning specific dirs
+        # but should see a message about no files needing cleanup
+        mock_logger.info.assert_called_with("No files needed cleanup")
+
+        # Check that we didn't try to clean non-existent directories
+        for call in mock_logger.info.call_args_list:
+            assert "Cleaning raw files directory" not in call[0][0]
+            assert "Cleaning DNG files directory" not in call[0][0]
