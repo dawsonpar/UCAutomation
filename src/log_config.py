@@ -17,7 +17,7 @@ if not logger.handlers:
     handler = TimedRotatingFileHandler(
         log_file, when="midnight", interval=1, backupCount=7
     )
-    handler.suffix = "%Y-%m-%d"
+    handler.suffix = "%Y-%m-%d.log"
     formatter = logging.Formatter(
         "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
