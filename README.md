@@ -1,7 +1,8 @@
 # UCAutomation
 
-## Description
+https://github.com/user-attachments/assets/e391ddd0-df56-483e-9acd-44d399f5814b
 
+## Description
 Automate the hourly conversion of new raw photos (.arw, .nef, .cr3) uploaded to a specific Google Drive folder to .dng format.
 
 ## DEVELOPER GUIDE
