@@ -157,6 +157,24 @@ launchctl list | grep rawconverter
 
 ## Troubleshooting
 
+### Google IAM Service Account Out of Storage
+Navigate to Google Cloud and go into the UCAutomation project.
+
+In the sidebar go to IAM & Admin and Service Accounts
+<img width="963" alt="Screenshot 2025-04-28 at 10 38 00 AM" src="https://github.com/user-attachments/assets/29b59f82-65ab-431e-abc6-fca2b6f76298" />
+
+Click on "Create service account."
+<img width="1800" alt="Screenshot 2025-04-28 at 10 39 17 AM" src="https://github.com/user-attachments/assets/f42ba82e-6a0d-45c4-866f-2d4dad2ef66f" />
+
+Give the Service Account a descriptive name that can identify your machine
+<img width="947" alt="Screenshot 2025-04-28 at 10 42 15 AM" src="https://github.com/user-attachments/assets/ef4c460d-5ee5-4c57-893c-c597287b7157" />
+
+Give the Service account the following roles: Firebase Rules System, Firestore Service Agent, Cloud Datastore User
+<img width="947" alt="Screenshot 2025-04-28 at 10 42 59 AM" src="https://github.com/user-attachments/assets/a956ffa6-0267-4363-8150-19fa769faa5c" />
+
+Click Done and click on the 
+
+
 ### Converted file not found
 
 Check the version of Adobe DNG Converter and see if it supports converting the latest raw photos. You may need to redownload the latest version of Adobe DNG Converter.
