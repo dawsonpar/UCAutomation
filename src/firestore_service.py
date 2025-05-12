@@ -118,6 +118,41 @@ class FirestoreService:
         logger.info(f"Marked file {file_id} as processed by {machine_id}")
         return True
 
+    def mark_as_uploaded(self, file_id, machine_id=None, additional_data=None):
+        """Mark a file as successfully uploaded.
+
+        Args:
+            file_id: Google Drive file ID
+            machine_id: Identifier for the machine that did the processing
+            additional_data: Optional dictionary with additional information to store
+
+        Returns:
+            bool: True if successfully marked as processed
+        """
+        doc_ref = self.collection.document(file_id)
+
+        # Get machine ID (hostname if not provided)
+        if not machine_id:
+            machine_id = os.uname().nodename
+
+        current_time = datetime.now().isoformat()
+
+        data = {
+            "status": "uploaded",
+            "machine_id": machine_id,
+            "updated_at": current_time,
+            "processed_at": current_time,
+        }
+
+        # Add any additional data
+        if additional_data and isinstance(additional_data, dict):
+            data.update(additional_data)
+
+        doc_ref.set(data)
+
+        logger.info(f"Marked file {file_id} as uploaded by {machine_id}")
+        return True
+
     def is_processed(self, file_id):
         """Check if a file has already been processed.
 
@@ -135,6 +170,24 @@ class FirestoreService:
 
         data = doc.to_dict()
         return data.get("status") == "processed"
+
+    def is_uploaded(self, file_id):
+        """Check if a file has already been uploaded.
+
+        Args:
+            file_id: Google Drive file ID
+
+        Returns:
+            bool: True if the file has been uploaded
+        """
+        doc_ref = self.collection.document(file_id)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            return False
+
+        data = doc.to_dict()
+        return data.get("status") == "uploaded"
 
     def get_file_status(self, file_id):
         """Get the current status of a file.

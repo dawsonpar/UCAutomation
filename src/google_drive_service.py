@@ -184,6 +184,10 @@ class GoogleDriveService:
         """Check if a file has already been processed using Firestore."""
         return self.firestore_service.is_processed(file_id)
 
+    def is_file_uploaded(self, file_id):
+        """Check if a file has already been uploaded using Firestore."""
+        return self.firestore_service.is_uploaded(file_id)
+
     def mark_file_as_processing(self, file_id, machine_id=None):
         """Mark a file as currently being processed in Firestore."""
         return self.firestore_service.mark_as_processing(file_id, machine_id)
@@ -191,6 +195,12 @@ class GoogleDriveService:
     def mark_file_as_processed(self, file_id, machine_id=None, additional_data=None):
         """Mark a file as successfully processed in Firestore."""
         return self.firestore_service.mark_as_processed(
+            file_id, machine_id, additional_data
+        )
+
+    def mark_file_as_uploaded(self, file_id, machine_id=None, additional_data=None):
+        """Mark a file as successfully uploaded in Firestore."""
+        return self.firestore_service.mark_as_uploaded(
             file_id, machine_id, additional_data
         )
 

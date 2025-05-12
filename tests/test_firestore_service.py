@@ -178,6 +178,55 @@ def test_is_processed_not_found(mock_firestore):
         assert result is False
 
 
+def test_mark_as_uploaded(mock_firestore):
+    """Test marking a file as processed"""
+    with patch("os.uname") as mock_uname, patch("os.path.exists", return_value=True):
+        mock_uname.return_value.nodename = "test-machine"
+
+        service = FirestoreService(credentials_path="/fake/path.json")
+        result = service.mark_as_uploaded(
+            "file123", additional_data={"filename": "test.nef"}
+        )
+
+        assert result is True
+        mock_firestore["doc"].set.assert_called_once()
+        args = mock_firestore["doc"].set.call_args[0][0]
+        assert args["status"] == "uploaded"
+        assert args["machine_id"] == "test-machine"
+        assert args["filename"] == "test.nef"
+        assert "updated_at" in args
+        assert "processed_at" in args
+
+
+def test_is_uploaded_true(mock_firestore):
+    """Test checking if a file is processed (when it is)"""
+    # Setup document snapshot behavior
+    mock_snapshot = MagicMock()
+    mock_snapshot.exists = True
+    mock_snapshot.to_dict.return_value = {"status": "uploaded"}
+    mock_firestore["doc"].get.return_value = mock_snapshot
+
+    with patch("os.path.exists", return_value=True):
+        service = FirestoreService(credentials_path="/fake/path.json")
+        result = service.is_uploaded("file123")
+
+        assert result is True
+
+
+def test_is_uploaded_false_status(mock_firestore):
+    """Test checking if a file is uploaded (when status is not uploaded)"""
+    mock_snapshot = MagicMock()
+    mock_snapshot.exists = True
+    mock_snapshot.to_dict.return_value = {"status": "processed"}
+    mock_firestore["doc"].get.return_value = mock_snapshot
+
+    with patch("os.path.exists", return_value=True):
+        service = FirestoreService(credentials_path="/fake/path.json")
+        result = service.is_uploaded("file123")
+
+        assert result is False
+
+
 def test_get_file_status(mock_firestore):
     """Test getting file status"""
     file_data = {

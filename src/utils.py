@@ -212,8 +212,6 @@ def process_file(
             )
             return False
 
-        logger.info(f"Uploaded {dng_file_name} to Google Drive with ID: {uploaded_id}")
-
         # Mark as fully processed with additional info
         drive_service.mark_file_as_processed(
             file_id,
