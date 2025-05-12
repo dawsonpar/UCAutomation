@@ -212,8 +212,7 @@ def process_file(
             )
             return False
 
-        # Mark as fully processed with additional info
-        drive_service.mark_file_as_processed(
+        drive_service.mark_file_as_uploaded(
             file_id,
             machine_id,
             {

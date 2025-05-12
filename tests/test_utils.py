@@ -470,7 +470,7 @@ class TestProcessFile:
         mock_drive_service.mark_file_as_failed.assert_called_once()
         mock_drive_service.mark_file_as_processed.assert_not_called()
 
-    def test_process_file_success(self, mock_drive_service):
+    def test_upload_file_success(self, mock_drive_service):
         """Test successful file processing"""
         # Setup mocks
         mock_drive_service.is_file_processed.return_value = False
@@ -495,7 +495,7 @@ class TestProcessFile:
 
         # Verify
         assert result is True
-        mock_drive_service.mark_file_as_processed.assert_called_once_with(
+        mock_drive_service.mark_file_as_uploaded.assert_called_once_with(
             "file123",
             "test-machine",
             {
