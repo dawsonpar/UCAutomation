@@ -41,6 +41,7 @@ def test_file():
 def test_process_file_already_processed(mock_services, test_file):
     """Test processing a file that's already been processed"""
     # Set up the mock to indicate file is already processed
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = True
 
     result = process_file(
@@ -65,6 +66,7 @@ def test_process_file_already_processed(mock_services, test_file):
 def test_process_file_max_retries_exceeded(mock_services, test_file):
     """Test processing a file that has exceeded max retry attempts"""
     # Set up mocks
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = False
 
     # Mock file status showing max retries exceeded
@@ -93,6 +95,7 @@ def test_process_file_max_retries_exceeded(mock_services, test_file):
 def test_process_file_download_failure(mock_services, test_file):
     """Test processing a file where download fails"""
     # Set up mocks
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = False
     mock_services["drive_service"].get_file_status.return_value = (
         None  # No existing status
@@ -115,6 +118,7 @@ def test_process_file_download_failure(mock_services, test_file):
     # Should return False and mark as failed
     assert result is False
     mock_services["drive_service"].download_file.assert_called_once()
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].mark_file_as_failed.assert_called_once()
 
     # Add debug print to see the call_args structure
@@ -135,6 +139,7 @@ def test_process_file_download_failure(mock_services, test_file):
 def test_process_file_conversion_failure(mock_services, test_file):
     """Test processing a file where conversion fails"""
     # Set up mocks for successful download but failed conversion
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = False
     mock_services["drive_service"].get_file_status.return_value = None
     mock_services["drive_service"].mark_file_as_processing.return_value = True
@@ -170,6 +175,7 @@ def test_process_file_conversion_failure(mock_services, test_file):
 def test_process_file_upload_failure(mock_services, test_file):
     """Test processing a file where upload to Google Drive fails"""
     # Set up mocks for successful download and conversion but failed upload
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = False
     mock_services["drive_service"].get_file_status.return_value = None
     mock_services["drive_service"].mark_file_as_processing.return_value = True
@@ -206,6 +212,7 @@ def test_process_file_upload_failure(mock_services, test_file):
 def test_process_file_exception_handling(mock_services, test_file):
     """Test handling exceptions during file processing"""
     # Set up mocks
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = False
     mock_services["drive_service"].get_file_status.return_value = None
     mock_services["drive_service"].mark_file_as_processing.return_value = True
@@ -237,6 +244,7 @@ def test_process_file_exception_handling(mock_services, test_file):
 def test_process_file_success(mock_services, test_file):
     """Test successful end-to-end processing of a file"""
     # Set up mocks for success at all stages
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = False
     mock_services["drive_service"].get_file_status.return_value = None
     mock_services["drive_service"].mark_file_as_processing.return_value = True
@@ -264,8 +272,8 @@ def test_process_file_success(mock_services, test_file):
     mock_services["drive_service"].upload_file.assert_called_once()
 
     # Verify correctly marked as processed with all metadata
-    mock_services["drive_service"].mark_file_as_processed.assert_called_once()
-    process_data = mock_services["drive_service"].mark_file_as_processed.call_args[0][2]
+    mock_services["drive_service"].mark_file_as_uploaded.assert_called_once()
+    process_data = mock_services["drive_service"].mark_file_as_uploaded.call_args[0][2]
     assert process_data["original_filename"] == test_file["name"]
     assert process_data["converted_filename"] == "test_photo.dng"
     assert process_data["dng_file_id"] == "uploaded_file_id_456"
@@ -274,6 +282,7 @@ def test_process_file_success(mock_services, test_file):
 def test_process_file_already_being_processed(mock_services, test_file):
     """Test attempting to process a file already being processed by another machine"""
     # Set up mocks
+    mock_services["drive_service"].is_file_uploaded.return_value = False
     mock_services["drive_service"].is_file_processed.return_value = False
     mock_services["drive_service"].get_file_status.return_value = None
 

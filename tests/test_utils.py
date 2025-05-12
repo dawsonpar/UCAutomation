@@ -233,16 +233,16 @@ class TestGetQuota:
 class TestGetQuotaThreshold:
     """Tests for get_quota_threshold function"""
 
-    @patch("utils.logging.info")
+    @patch("utils.logger.info")
     def test_get_quota_threshold_none(self, mock_logging_info):
         """Test handling None quota info"""
         result = utils.get_quota_threshold(None)
         assert result is False
         assert mock_logging_info.call_count == 0
 
-    @patch("utils.logging.info")
-    @patch("utils.logging.error")
-    @patch("utils.logging.warning")
+    @patch("utils.logger.info")
+    @patch("utils.logger.error")
+    @patch("utils.logger.warning")
     def test_get_quota_threshold_below(
         self,
         mock_logging_warning,
@@ -257,9 +257,9 @@ class TestGetQuotaThreshold:
         mock_logging_error.assert_not_called()
         mock_logging_warning.assert_not_called()
 
-    @patch("utils.logging.info")
-    @patch("utils.logging.error")
-    @patch("utils.logging.warning")
+    @patch("utils.logger.info")
+    @patch("utils.logger.error")
+    @patch("utils.logger.warning")
     def test_get_quota_threshold_above(
         self,
         mock_logging_warning,
@@ -274,9 +274,9 @@ class TestGetQuotaThreshold:
         mock_logging_error.assert_called_once()
         mock_logging_warning.assert_called_once()
 
-    @patch("utils.logging.info")
-    @patch("utils.logging.error")
-    @patch("utils.logging.warning")
+    @patch("utils.logger.info")
+    @patch("utils.logger.error")
+    @patch("utils.logger.warning")
     def test_get_quota_threshold_equal(
         self, mock_logging_warning, mock_logging_error, mock_logging_info
     ):
@@ -299,6 +299,7 @@ class TestProcessFile:
     def test_process_file_already_processed(self, mock_drive_service):
         """Test handling already processed file"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = True
         mock_converter = MagicMock()
         test_file = {"id": "file123", "name": "test.cr3"}
@@ -323,6 +324,7 @@ class TestProcessFile:
     def test_process_file_max_retries_exceeded(self, mock_drive_service):
         """Test handling file with max retries exceeded"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = False
         mock_drive_service.get_file_status.return_value = {
             "status": "failed",
@@ -352,6 +354,7 @@ class TestProcessFile:
     def test_process_file_already_processing(self, mock_drive_service):
         """Test handling file already being processed by another machine"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = False
         mock_drive_service.get_file_status.return_value = {
             "status": "processing",
@@ -383,6 +386,7 @@ class TestProcessFile:
     def test_process_file_download_failure(self, mock_drive_service):
         """Test handling file download failure"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = False
         mock_drive_service.get_file_status.return_value = None
         mock_drive_service.mark_file_as_processing.return_value = True
@@ -412,6 +416,7 @@ class TestProcessFile:
     def test_process_file_conversion_failure(self, mock_drive_service):
         """Test handling file conversion failure"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = False
         mock_drive_service.get_file_status.return_value = None
         mock_drive_service.mark_file_as_processing.return_value = True
@@ -442,6 +447,7 @@ class TestProcessFile:
     def test_process_file_upload_failure(self, mock_drive_service):
         """Test handling file upload failure"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = False
         mock_drive_service.get_file_status.return_value = None
         mock_drive_service.mark_file_as_processing.return_value = True
@@ -473,6 +479,7 @@ class TestProcessFile:
     def test_upload_file_success(self, mock_drive_service):
         """Test successful file processing"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = False
         mock_drive_service.get_file_status.return_value = None
         mock_drive_service.mark_file_as_processing.return_value = True
@@ -508,6 +515,7 @@ class TestProcessFile:
     def test_process_file_exception(self, mock_drive_service):
         """Test handling unexpected exceptions during processing"""
         # Setup mocks
+        mock_drive_service.is_file_uploaded.return_value = False
         mock_drive_service.is_file_processed.return_value = False
         mock_drive_service.get_file_status.return_value = None
         mock_drive_service.mark_file_as_processing.return_value = True

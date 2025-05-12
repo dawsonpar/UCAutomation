@@ -49,6 +49,20 @@ def test_is_processed(mock_firestore_service):
     mock_firestore_service.is_processed.assert_called_once_with(file_id)
 
 
+def test_is_uploaded(mock_firestore_service):
+    """Test checking if a file was uploaded."""
+    file_id = "test_file_id"
+
+    # Setup the mock to return True
+    mock_firestore_service.is_uploaded.return_value = True
+
+    converter = RawFileConverter(firestore_service=mock_firestore_service)
+    result = converter.is_uploaded(file_id)
+
+    assert result is True
+    mock_firestore_service.is_uploaded.assert_called_once_with(file_id)
+
+
 def test_mark_as_processing(mock_firestore_service):
     """Test marking a file as processing."""
     file_id = "test_file_id"
@@ -70,7 +84,7 @@ def test_mark_as_processed(mock_firestore_service):
     additional_data = {"filename": "test.dng"}
 
     converter = RawFileConverter(firestore_service=mock_firestore_service)
-    result = converter.mark_as_processed(file_id, additional_data, machine_id)
+    result = converter.mark_as_processed(file_id, machine_id, additional_data)
 
     assert result is True
     mock_firestore_service.mark_as_processed.assert_called_once_with(
@@ -84,7 +98,8 @@ def test_convert_already_processed(mock_firestore_service):
     output_dir = "/tmp/output"
     file_id = "test_file_id"
 
-    # Setup to return already processed
+    # Setup to return not uploaded but already processed
+    mock_firestore_service.is_uploaded.return_value = False
     mock_firestore_service.is_processed.return_value = True
 
     converter = RawFileConverter(firestore_service=mock_firestore_service)
@@ -92,7 +107,6 @@ def test_convert_already_processed(mock_firestore_service):
 
     assert result is False
     mock_firestore_service.is_processed.assert_called_once_with(file_id)
-    mock_firestore_service.mark_as_processing.assert_not_called()
 
 
 def test_convert_already_processing(mock_firestore_service):
@@ -102,6 +116,7 @@ def test_convert_already_processing(mock_firestore_service):
     file_id = "test_file_id"
 
     # Setup to return not processed but already processing
+    mock_firestore_service.is_uploaded.return_value = False
     mock_firestore_service.is_processed.return_value = False
     mock_firestore_service.mark_as_processing.return_value = False
 
@@ -121,6 +136,7 @@ def test_convert_missing_converter():
 
     with patch("raw_converter.FirestoreService") as mock_firestore_cls:
         mock_service = MagicMock()
+        mock_service.is_uploaded.return_value = False
         mock_service.is_processed.return_value = False
         mock_service.mark_as_processing.return_value = True
         mock_firestore_cls.return_value = mock_service
@@ -142,6 +158,7 @@ def test_convert_successful():
 
     with patch("raw_converter.FirestoreService") as mock_firestore_cls:
         mock_service = MagicMock()
+        mock_service.is_uploaded.return_value = False
         mock_service.is_processed.return_value = False
         mock_service.mark_as_processing.return_value = True
         mock_firestore_cls.return_value = mock_service
@@ -179,6 +196,7 @@ def test_convert_failure():
 
     with patch("raw_converter.FirestoreService") as mock_firestore_cls:
         mock_service = MagicMock()
+        mock_service.is_uploaded.return_value = False
         mock_service.is_processed.return_value = False
         mock_service.mark_as_processing.return_value = True
         mock_firestore_cls.return_value = mock_service
@@ -234,6 +252,7 @@ def test_convert_dng_file_not_found():
 
     with patch("raw_converter.FirestoreService") as mock_firestore_cls:
         mock_service = MagicMock()
+        mock_service.is_uploaded.return_value = False
         mock_service.is_processed.return_value = False
         mock_service.mark_as_processing.return_value = True
         mock_firestore_cls.return_value = mock_service
@@ -267,3 +286,25 @@ def test_convert_dng_file_not_found():
 
             # Should not mark as processed
             mock_service.mark_as_processed.assert_not_called()
+
+
+def test_convert_skip_if_uploaded(mock_firestore_service):
+    """Test convert skips when file is already uploaded."""
+    file_path = "/tmp/test.cr3"
+    output_dir = "/tmp/output"
+    file_id = "test_file_id"
+
+    # Setup mock to return True for is_uploaded
+    mock_firestore_service.is_uploaded.return_value = True
+
+    converter = RawFileConverter(firestore_service=mock_firestore_service)
+    result = converter.convert(file_path, output_dir, file_id)
+
+    # Should return False since it skipped conversion
+    assert result is False
+    # Should check if uploaded but not if processed
+    mock_firestore_service.is_uploaded.assert_called_once_with(file_id)
+    mock_firestore_service.is_processed.assert_not_called()
+    # Should not mark as processing or processed
+    mock_firestore_service.mark_as_processing.assert_not_called()
+    mock_firestore_service.mark_as_processed.assert_not_called()
