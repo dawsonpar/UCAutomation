@@ -36,15 +36,12 @@ def format_size(size_bytes):
 
 def get_quota():
     """Check and display Google Drive quota for a service account"""
-    # Load environment variables
     load_dotenv()
 
-    # Get required environment variables
     folder_id = os.environ.get("INGEST_FOLDER_ID")
     google_creds_path = os.environ.get("GOOGLE_CREDENTIALS_PATH")
     firebase_creds_path = os.environ.get("FIREBASE_CREDENTIALS_PATH")
 
-    # Validate required environment variables
     missing_vars = []
     if not folder_id:
         missing_vars.append("INGEST_FOLDER_ID")
@@ -60,21 +57,18 @@ def get_quota():
         return None
 
     try:
-        # Initialize Google Drive service
         drive_service = GoogleDriveService(
             folder_id=folder_id,
             credentials_path=google_creds_path,
             firebase_credentials_path=firebase_creds_path,
         )
 
-        # Get storage quota
         quota_info = drive_service.get_storage_quota()
 
         if not quota_info:
             print("Error: Failed to retrieve storage quota information.")
             return None
 
-        # Print quota information in a readable format
         print("\n===== Google Drive Service Account Storage Quota =====\n")
         print(f"Total Quota:        {format_size(quota_info['limit'])}")
         print(
@@ -85,7 +79,6 @@ def get_quota():
         print(f"Remaining Storage:  {format_size(quota_info['remaining'])}")
         print("\n=====================================================\n")
 
-        # Additional tips if storage is running low
         if quota_info["usage_percentage"] > 80:
             print("⚠️  Warning: Your storage is running low!")
             print("This service account is running low on storage.")
@@ -118,20 +111,17 @@ def get_quota_threshold(quota_info, threshold=90.0):
         logger.error("Failed to retrieve Drive storage quota information")
         return False
 
-    # Log current quota status
     logger.info(
         f"Drive storage status: {quota_info['usage_percentage']:.2f}% used "
         f"({quota_info['usage'] / (1024 * 1024 * 1024):.2f} GB of {quota_info['limit'] / (1024 * 1024 * 1024):.2f} GB)"
     )
 
-    # Check if quota exceeds threshold
     if quota_info["usage_percentage"] > threshold:
         logger.error(
             f"Drive storage quota critical: {quota_info['usage_percentage']:.2f}% used "
             f"({quota_info['usage'] / (1024 * 1024 * 1024):.2f} GB of {quota_info['limit'] / (1024 * 1024 * 1024):.2f} GB). "
             "Processing halted to prevent quota exceeded errors."
         )
-        # Provide suggestions for clearing space
         logger.warning(
             "To free up space: 1) Empty trash 2) Delete unnecessary files "
             "3) Consider using a different service account"
@@ -151,12 +141,14 @@ def process_file(
     # Configuration
     MAX_RETRIES = 3  # Maximum number of retries for failed conversions
 
-    # Skip if already processed successfully
+    if drive_service.is_file_uploaded(file_id):
+        logger.info(f"Skipping {file_name} (ID: {file_id}), already uploaded")
+        return True
+
     if drive_service.is_file_processed(file_id):
         logger.info(f"Skipping {file_name} (ID: {file_id}), already processed")
         return True
 
-    # Get current status
     status = drive_service.get_file_status(file_id)
     if status:
         retry_count = status.get("retry_count", 0)
@@ -166,7 +158,6 @@ def process_file(
             )
             return False
 
-    # Try to mark as processing
     if not drive_service.mark_file_as_processing(file_id, machine_id):
         logger.info(
             f"Skipping {file_name} (ID: {file_id}), already being processed by another machine"
@@ -198,7 +189,6 @@ def process_file(
             )
             return False
 
-        # Get the converted file path
         dng_file_name = os.path.splitext(file_name)[0] + ".dng"
         dng_file_path = os.path.join(output_dir, dng_file_name)
 

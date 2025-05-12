@@ -35,6 +35,10 @@ class RawFileConverter:
         """Check if the file has already been processed using Firestore."""
         return self.firestore_service.is_processed(file_id)
 
+    def is_uploaded(self, file_id):
+        """Check if the file has already been uploaded using Firestore."""
+        return self.firestore_service.is_uploaded(file_id)
+
     def mark_as_processing(self, file_id, machine_id=None):
         """Mark a file as currently being processed in Firestore.
 
@@ -44,7 +48,7 @@ class RawFileConverter:
         with self.lock:
             return self.firestore_service.mark_as_processing(file_id, machine_id)
 
-    def mark_as_processed(self, file_id, additional_data=None, machine_id=None):
+    def mark_as_processed(self, file_id, machine_id=None, additional_data=None):
         """Mark a file as processed and update Firestore."""
         with self.lock:
             return self.firestore_service.mark_as_processed(
@@ -79,7 +83,10 @@ class RawFileConverter:
         if file_id is None:
             file_id = file_name
 
-        # Check if already processed
+        if self.is_uploaded(file_id):
+            logger.info(f"Skipping {file_name}, already uploaded.")
+            return False
+
         if self.is_processed(file_id):
             logger.info(f"Skipping {file_name}, already processed.")
             return False
@@ -127,7 +134,7 @@ class RawFileConverter:
                     "converted_filename": dng_file_name,
                     "dng_file_path": dng_file_path,
                 }
-                self.mark_as_processed(file_id, additional_data)
+                self.mark_as_processed(file_id, None, additional_data)
 
                 return True
             else:
