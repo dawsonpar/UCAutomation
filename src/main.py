@@ -9,6 +9,7 @@ from utils import (
     clean_download_directories,
     get_quota,
     get_quota_threshold,
+    move_to_archive,
     process_file,
 )
 
@@ -22,6 +23,7 @@ def main():
     # Get required environment variables
     folder_id = os.environ.get("INGEST_FOLDER_ID")
     dng_folder_id = os.environ.get("DNG_FOLDER_ID")
+    archive_folder_id = os.environ.get("ARCHIVE_FOLDER_ID")
     google_creds_path = os.environ.get("GOOGLE_CREDENTIALS_PATH")
     firebase_creds_path = os.environ.get("FIREBASE_CREDENTIALS_PATH")
 
@@ -31,6 +33,8 @@ def main():
         missing_vars.append("INGEST_FOLDER_ID")
     if not dng_folder_id:
         missing_vars.append("DNG_FOLDER_ID")
+    if not archive_folder_id:
+        missing_vars.append("ARCHIVE_FOLDER_ID")
     if not google_creds_path:
         missing_vars.append("GOOGLE_CREDENTIALS_PATH")
     if not firebase_creds_path:
@@ -103,6 +107,8 @@ def main():
                 output_dir,
                 dng_folder_id,
             )
+
+            move_to_archive(drive_service, file, archive_folder_id)
 
     except Exception as e:
         logger.error(f"An error occurred in the main script: {str(e)}")

@@ -311,3 +311,37 @@ def clean_download_directories(base_dir=None, days_threshold=7):
     except Exception as e:
         logger.error(f"Error during directory cleanup: {e}")
         return (0, 0)
+
+
+def move_to_archive(drive_service, file, archive_folder_id):
+    """
+    Move uploaded files from ingest folder to archive folder.
+
+    Args:
+        drive_service: Instance of GoogleDriveService class
+        file (obj): File from Google Drive
+        folder_id (str): The ID of the destination folder.
+
+    Returns:
+        list: The new parent folder IDs if successful, None otherwise.
+    """
+
+    file_id = file["id"]
+    file_name = file["name"]
+
+    status = drive_service.get_file_status(file_id)
+    if not status.get("status") == "uploaded":
+        logger.error(
+            f"Did not move {file_name}({file_id}) to archive. Status is {status.get("status")}"
+        )
+        return False
+
+    try:
+        drive_service.move_file(file_id, archive_folder_id)
+        return True
+
+    except Exception as e:
+        logger.error(
+            f"Error when trying to move {file_name}({file_id}) to archive: {str(e)}"
+        )
+        return False

@@ -816,3 +816,61 @@ class TestCleanDownloadDirectories:
         for call in mock_logger.info.call_args_list:
             assert "Cleaning raw files directory" not in call[0][0]
             assert "Cleaning DNG files directory" not in call[0][0]
+
+
+class TestMoveToArchive:
+    """Tests for move_to_archive function"""
+
+    def test_move_to_archive_success(self, mock_drive_service):
+        """Test successful file moving to archive"""
+        # Setup mocks
+        mock_drive_service.get_file_status.return_value = {"status": "uploaded"}
+        mock_drive_service.move_file.return_value = ["archive_folder_id"]
+        test_file = {"id": "file123", "name": "test.cr3"}
+
+        # Call function
+        result = utils.move_to_archive(
+            mock_drive_service, test_file, "archive_folder_id"
+        )
+
+        # Verify
+        assert result is True
+        mock_drive_service.get_file_status.assert_called_once_with("file123")
+        mock_drive_service.move_file.assert_called_once_with(
+            "file123", "archive_folder_id"
+        )
+
+    def test_move_to_archive_not_uploaded(self, mock_drive_service):
+        """Test handling file with status other than 'uploaded'"""
+        # Setup mocks
+        mock_drive_service.get_file_status.return_value = {"status": "processed"}
+        test_file = {"id": "file123", "name": "test.cr3"}
+
+        # Call function
+        result = utils.move_to_archive(
+            mock_drive_service, test_file, "archive_folder_id"
+        )
+
+        # Verify
+        assert result is False
+        mock_drive_service.get_file_status.assert_called_once_with("file123")
+        mock_drive_service.move_file.assert_not_called()
+
+    def test_move_to_archive_exception(self, mock_drive_service):
+        """Test handling exceptions during file move"""
+        # Setup mocks
+        mock_drive_service.get_file_status.return_value = {"status": "uploaded"}
+        mock_drive_service.move_file.side_effect = Exception("Test error")
+        test_file = {"id": "file123", "name": "test.cr3"}
+
+        # Call function
+        result = utils.move_to_archive(
+            mock_drive_service, test_file, "archive_folder_id"
+        )
+
+        # Verify
+        assert result is False
+        mock_drive_service.get_file_status.assert_called_once_with("file123")
+        mock_drive_service.move_file.assert_called_once_with(
+            "file123", "archive_folder_id"
+        )
