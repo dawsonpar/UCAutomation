@@ -180,6 +180,38 @@ class GoogleDriveService:
             logger.error(f"Error uploading file {file_path}: {str(e)}")
             return None
 
+    def move_file(self, file_id, folder_id):
+        """
+        Move the specified file to the specified folder in Google Drive.
+
+        Args:
+            file_id (str): The ID of the file to move.
+            folder_id (str): The ID of the destination folder.
+
+        Returns:
+            list: The new parent folder IDs if successful, None otherwise.
+        """
+
+        try:
+            file = self.service.files().get(fileId=file_id, fields="parents").execute()
+            previous_parents = ",".join(file.get("parents"))
+
+            file = (
+                self.service.files()
+                .update(
+                    fileId=file_id,
+                    addParents=folder_id,
+                    removeParents=previous_parents,
+                    fields="id, parents",
+                )
+                .execute()
+            )
+            logger.info(f"File {file_id} moved to {file.get("parents")}.")
+            return file.get("parents")
+        except Exception as e:
+            logger.error(f"Error moving file {file_id}: {str(e)}")
+            return None
+
     def is_file_processed(self, file_id):
         """Check if a file has already been processed using Firestore."""
         return self.firestore_service.is_processed(file_id)

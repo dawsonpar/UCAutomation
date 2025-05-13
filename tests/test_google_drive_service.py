@@ -331,3 +331,193 @@ def test_file_status_methods(mock_firestore_service):
         result = google_drive_service.get_file_status(file_id)
         assert result == {"status": "processed"}
         mock_firestore_service.get_file_status.assert_called_with(file_id)
+
+
+def test_move_file():
+    folder_id = "test_folder_id"
+    destination_folder_id = "destination_folder_id"
+    file_id = "test_file_id"
+    mock_credentials = MagicMock()
+    mock_service = MagicMock()
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
+
+        # Set up mock for get method (to get current parents)
+        mock_service.files.return_value.get.return_value.execute.return_value = {
+            "parents": ["original_parent_id"]
+        }
+
+        # Set up mock for update method (to move the file)
+        mock_service.files.return_value.update.return_value.execute.return_value = {
+            "id": file_id,
+            "parents": [destination_folder_id],
+        }
+
+        # Test successful move
+        result = google_drive_service.move_file(file_id, destination_folder_id)
+
+        # Assert that the API was called correctly
+        mock_service.files.return_value.get.assert_called_once_with(
+            fileId=file_id, fields="parents"
+        )
+        mock_service.files.return_value.update.assert_called_once_with(
+            fileId=file_id,
+            addParents=destination_folder_id,
+            removeParents="original_parent_id",
+            fields="id, parents",
+        )
+
+        # Check that the function returns the new parents array
+        assert result == [destination_folder_id]
+
+
+def test_move_file_error():
+    folder_id = "test_folder_id"
+    destination_folder_id = "destination_folder_id"
+    file_id = "test_file_id"
+    mock_credentials = MagicMock()
+    mock_service = MagicMock()
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
+
+        mock_service.files.return_value.get.return_value.execute.side_effect = (
+            Exception("API Error")
+        )
+
+        result = google_drive_service.move_file(file_id, destination_folder_id)
+        assert result is None
+
+        mock_service.files.return_value.get.return_value.execute.side_effect = None
+        mock_service.files.return_value.get.return_value.execute.return_value = {
+            "parents": ["original_parent_id"]
+        }
+        mock_service.files.return_value.update.return_value.execute.side_effect = (
+            Exception("API Error")
+        )
+
+        result = google_drive_service.move_file(file_id, destination_folder_id)
+        assert result is None
+
+
+def test_move_file_to_current_parent():
+    """Test moving a file to its current parent folder (no-op)."""
+    folder_id = "test_folder_id"
+    current_parent_id = "current_parent_id"
+    file_id = "test_file_id"
+    mock_credentials = MagicMock()
+    mock_service = MagicMock()
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
+
+        # Set up mock for get method (to get current parents)
+        mock_service.files.return_value.get.return_value.execute.return_value = {
+            "parents": [current_parent_id]
+        }
+
+        # Set up mock for update method
+        mock_service.files.return_value.update.return_value.execute.return_value = {
+            "id": file_id,
+            "parents": [current_parent_id],  # Same parent ID returned
+        }
+
+        # Try to move file to its current parent
+        result = google_drive_service.move_file(file_id, current_parent_id)
+
+        # Assert that get was called but no actual file move operation performed
+        mock_service.files.return_value.get.assert_called_once_with(
+            fileId=file_id, fields="parents"
+        )
+
+        # Verify the update was called with proper parameters
+        # Even though it's the same folder, the API call should still be made
+        mock_service.files.return_value.update.assert_called_once_with(
+            fileId=file_id,
+            addParents=current_parent_id,
+            removeParents=current_parent_id,
+            fields="id, parents",
+        )
+
+        # Function should still return the parents array
+        assert result == [current_parent_id]
+
+
+def test_move_file_nonexistent_destination():
+    """Test moving a file to a non-existent destination folder."""
+    folder_id = "test_folder_id"
+    nonexistent_folder_id = "nonexistent_folder_id"
+    file_id = "test_file_id"
+    mock_credentials = MagicMock()
+    mock_service = MagicMock()
+
+    with patch(
+        "google_drive_service.service_account.Credentials.from_service_account_file",
+        return_value=mock_credentials,
+    ), patch("google_drive_service.build", return_value=mock_service), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "google_drive_service.FirestoreService"
+    ):
+        google_drive_service = GoogleDriveService(
+            folder_id, credentials_path="mock/path.json"
+        )
+
+        # Set up mock for get method (to get current parents)
+        mock_service.files.return_value.get.return_value.execute.return_value = {
+            "parents": ["original_parent_id"]
+        }
+
+        # Simulate an API error that would happen when destination doesn't exist
+        http_error = HttpError(
+            resp=MagicMock(status=404),
+            content=b'{"error": {"message": "File not found: nonexistent_folder_id"}}',
+        )
+        mock_service.files.return_value.update.return_value.execute.side_effect = (
+            http_error
+        )
+
+        # Try to move file to non-existent folder
+        result = google_drive_service.move_file(file_id, nonexistent_folder_id)
+
+        # Assert API was called with the right parameters
+        mock_service.files.return_value.get.assert_called_once_with(
+            fileId=file_id, fields="parents"
+        )
+        mock_service.files.return_value.update.assert_called_once_with(
+            fileId=file_id,
+            addParents=nonexistent_folder_id,
+            removeParents="original_parent_id",
+            fields="id, parents",
+        )
+
+        # Function should return None on error
+        assert result is None
