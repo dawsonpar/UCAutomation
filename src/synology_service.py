@@ -62,3 +62,19 @@ class SynologyService:
         except Exception as e:
             logger.error(f"Error when trying to get session ID: {str(e)}")
             return None
+
+    def list_shares(self, base_url, sid):
+        try:
+            list_url = f"{base_url}/entry.cgi"
+            params_list = {
+                "api": "SYNO.FileStation.List",
+                "version": "2",
+                "method": "list_share",
+                "_sid": sid,
+            }
+            response = requests.get(list_url, params=params_list, verify=False)
+            return response.json()
+
+        except Exception as e:
+            logger.error(f"Error when trying to list shares from FileStation: {str(e)}")
+            return None
