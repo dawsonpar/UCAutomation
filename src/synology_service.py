@@ -78,3 +78,20 @@ class SynologyService:
         except Exception as e:
             logger.error(f"Error when trying to list shares from FileStation: {str(e)}")
             return None
+
+    def logout(self, base_url, sid):
+        try:
+            auth_url = f"{base_url}/auth.cgi"
+            params_logout = {
+                "api": "SYNO.API.Auth",
+                "version": "2",
+                "method": "logout",
+                "session": "FileStation",
+                "_sid": sid,
+            }
+            requests.get(auth_url, params=params_logout, verify=False)
+            return True
+
+        except Exception as e:
+            logger.error(f"Error when trying to logout: {str(e)}")
+            return False
