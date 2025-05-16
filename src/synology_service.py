@@ -95,3 +95,26 @@ class SynologyService:
         except Exception as e:
             logger.error(f"Error when trying to logout: {str(e)}")
             return False
+
+    def upload(self, base_url, sid, file_path, folder_path):
+
+        upload_url = f"{base_url}/entry.cgi"
+
+        upload_params = {
+            "api": "SYNO.FileStation.Upload",
+            "version": "",
+            "method": "upload",
+            "path": folder_path,
+            "create_parents": "true",
+            "overwrite": "true",
+            "_sid": sid,
+        }
+        try:
+            with open(file_path, "rb") as f:
+                files = {"file": f}
+                response = requests.post(
+                    upload_url, params=upload_params, files=files, verify=False
+                )
+                print(response.json())
+        except Exception as e:
+            print(f"Error when trying to upload file to NAS: {str(e)}")
