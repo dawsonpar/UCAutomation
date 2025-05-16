@@ -36,3 +36,29 @@ class SynologyService:
         except Exception as e:
             logger.info(f"Error when trying to get API info: {str(e)}")
             return None
+
+    def get_sid(self, base_url, username, password):
+        try:
+            auth_url = f"{base_url}/auth.cgi"
+            params_auth = {
+                "api": "SYNO.API.Auth",
+                "version": "6",
+                "method": "login",
+                "account": username,
+                "passwd": password,
+                "session": "FileStation",
+                "format": "sid",
+            }
+            response = requests.get(auth_url, params=params_auth, verify=False)
+            data = response.json()
+
+            if data.get("success"):
+                sid = data["data"]["sid"]
+                return sid
+            else:
+                logger.error("Login failed:", data)
+                return data
+
+        except Exception as e:
+            logger.error(f"Error when trying to get session ID: {str(e)}")
+            return None
