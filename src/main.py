@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from google_drive_service import GoogleDriveService
 from log_config import get_logger
 from raw_converter import RawFileConverter
+from synology_service import SynologyService
 from utils import (
     clean_download_directories,
     get_quota,
@@ -26,6 +27,10 @@ def main():
     archive_folder_id = os.environ.get("ARCHIVE_FOLDER_ID")
     google_creds_path = os.environ.get("GOOGLE_CREDENTIALS_PATH")
     firebase_creds_path = os.environ.get("FIREBASE_CREDENTIALS_PATH")
+    nas_ip = os.environ.get("NAS_IP")
+    nas_port = os.environ.get("NAS_PORT")
+    nas_user = os.environ.get("NAS_USER")
+    nas_pwd = os.environ.get("NAS_PWD")
 
     # Validate required environment variables
     missing_vars = []
@@ -39,6 +44,14 @@ def main():
         missing_vars.append("GOOGLE_CREDENTIALS_PATH")
     if not firebase_creds_path:
         missing_vars.append("FIREBASE_CREDENTIALS_PATH")
+    if not nas_ip:
+        missing_vars.append("NAS_IP")
+    if not nas_port:
+        missing_vars.append("NAS_PORT")
+    if not nas_user:
+        missing_vars.append("NAS_USER")
+    if not nas_pwd:
+        missing_vars.append("NAS_PWD")
 
     if missing_vars:
         logger.error(
@@ -65,50 +78,57 @@ def main():
         logger.info(f"Cleaned up {raw_cleaned} raw files and {dng_cleaned} DNG files")
 
     try:
-        # Initialize Google Drive service with Firestore integration
-        drive_service = GoogleDriveService(
-            folder_id=folder_id,
-            credentials_path=google_creds_path,
-            firebase_credentials_path=firebase_creds_path,
-        )
+        base_url = f"https://{nas_ip}:{nas_port}/webapi"
+        print(f"BASE_URL: {base_url}")
+        synology_service = SynologyService(firebase_creds_path)
 
-        # Check storage quota before proceeding
-        quota_info = get_quota()
-        if not get_quota_threshold(quota_info):
-            return
+        api_info = synology_service.get_api_info(base_url)
+        print(f"API_INFO: {api_info}")
+    # try:
+    #     # Initialize Google Drive service with Firestore integration
+    #     drive_service = GoogleDriveService(
+    #         folder_id=folder_id,
+    #         credentials_path=google_creds_path,
+    #         firebase_credentials_path=firebase_creds_path,
+    #     )
 
-        # Initialize the RawFileConverter with the same Firestore service
-        converter = RawFileConverter(firestore_service=drive_service.firestore_service)
+    #     # Check storage quota before proceeding
+    #     quota_info = get_quota()
+    #     if not get_quota_threshold(quota_info):
+    #         return
 
-        # Get machine identifier for tracking
-        machine_id = os.uname().nodename
-        logger.info(f"Running on machine: {machine_id}")
+    #     # Initialize the RawFileConverter with the same Firestore service
+    #     converter = RawFileConverter(firestore_service=drive_service.firestore_service)
 
-        # Fetch files from Google Drive
-        logger.info("Fetching file list from Google Drive")
-        files = drive_service.list_files()
+    #     # Get machine identifier for tracking
+    #     machine_id = os.uname().nodename
+    #     logger.info(f"Running on machine: {machine_id}")
 
-        # Filter for raw files
-        raw_files = [
-            file
-            for file in files
-            if file["name"].lower().endswith((".cr3", ".arw", ".nef"))
-        ]
-        logger.info(f"Found {len(raw_files)} raw files to process")
+    #     # Fetch files from Google Drive
+    #     logger.info("Fetching file list from Google Drive")
+    #     files = drive_service.list_files()
 
-        # Process each file
-        for file in raw_files:
-            process_file(
-                drive_service,
-                converter,
-                file,
-                machine_id,
-                download_dir,
-                output_dir,
-                dng_folder_id,
-            )
+    #     # Filter for raw files
+    #     raw_files = [
+    #         file
+    #         for file in files
+    #         if file["name"].lower().endswith((".cr3", ".arw", ".nef"))
+    #     ]
+    #     logger.info(f"Found {len(raw_files)} raw files to process")
 
-            move_to_archive(drive_service, file, archive_folder_id)
+    #     # Process each file
+    #     for file in raw_files:
+    #         process_file(
+    #             drive_service,
+    #             converter,
+    #             file,
+    #             machine_id,
+    #             download_dir,
+    #             output_dir,
+    #             dng_folder_id,
+    #         )
+
+    #         move_to_archive(drive_service, file, archive_folder_id)
 
     except Exception as e:
         logger.error(f"An error occurred in the main script: {str(e)}")
