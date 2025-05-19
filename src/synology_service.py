@@ -2,6 +2,7 @@ import os
 import shutil
 
 import requests
+from synology_api.filestation import FileStation
 
 from firestore_service import FirestoreService
 from log_config import get_logger
@@ -96,25 +97,21 @@ class SynologyService:
             logger.error(f"Error when trying to logout: {str(e)}")
             return False
 
-    def upload(self, base_url, sid, file_path, folder_path):
-
-        upload_url = f"{base_url}/entry.cgi"
-
-        upload_params = {
-            "api": "SYNO.FileStation.Upload",
-            "version": "",
-            "method": "upload",
-            "path": folder_path,
-            "create_parents": "true",
-            "overwrite": "true",
-            "_sid": sid,
-        }
+    def upload(self, ip, port, username, password, file_path, folder_path):
         try:
-            with open(file_path, "rb") as f:
-                files = {"file": f}
-                response = requests.post(
-                    upload_url, params=upload_params, files=files, verify=False
-                )
-                print(response.json())
+            fs = FileStation(
+                ip,
+                port,
+                username,
+                password,
+                secure=True,
+                cert_verify=False,
+                dsm_version=6,
+                debug=True,
+            )
+
+            fs.upload_file(folder_path, file_path, overwrite=False)
+            return True
         except Exception as e:
-            print(f"Error when trying to upload file to NAS: {str(e)}")
+            logger.error(f"Error trying to upload file: {str(e)}")
+            return False

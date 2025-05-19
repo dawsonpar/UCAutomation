@@ -23,3 +23,4 @@ rsa==4.9
 uritemplate==4.1.1
 urllib3==2.3.0
 watchdog==6.0.0
+synology_api>=0.8.1
