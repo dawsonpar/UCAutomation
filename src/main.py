@@ -23,7 +23,7 @@ def main():
 
     # Get required environment variables
     folder_id = os.environ.get("INGEST_FOLDER_ID")
-    dng_folder_id = os.environ.get("DNG_FOLDER_ID")
+    dng_folder_path = os.environ.get("NAS_DEST_PATH")
     archive_folder_id = os.environ.get("ARCHIVE_FOLDER_ID")
     google_creds_path = os.environ.get("GOOGLE_CREDENTIALS_PATH")
     firebase_creds_path = os.environ.get("FIREBASE_CREDENTIALS_PATH")
@@ -36,8 +36,6 @@ def main():
     missing_vars = []
     if not folder_id:
         missing_vars.append("INGEST_FOLDER_ID")
-    if not dng_folder_id:
-        missing_vars.append("DNG_FOLDER_ID")
     if not archive_folder_id:
         missing_vars.append("ARCHIVE_FOLDER_ID")
     if not google_creds_path:
@@ -78,57 +76,55 @@ def main():
         logger.info(f"Cleaned up {raw_cleaned} raw files and {dng_cleaned} DNG files")
 
     try:
-        base_url = f"https://{nas_ip}:{nas_port}/webapi"
-        print(f"BASE_URL: {base_url}")
-        synology_service = SynologyService(firebase_creds_path)
+        # Initialize Google Drive service with Firestore integration
+        drive_service = GoogleDriveService(
+            folder_id=folder_id,
+            credentials_path=google_creds_path,
+            firebase_credentials_path=firebase_creds_path,
+        )
 
-        api_info = synology_service.get_api_info(base_url)
-        print(f"API_INFO: {api_info}")
-    # try:
-    #     # Initialize Google Drive service with Firestore integration
-    #     drive_service = GoogleDriveService(
-    #         folder_id=folder_id,
-    #         credentials_path=google_creds_path,
-    #         firebase_credentials_path=firebase_creds_path,
-    #     )
+        quota_info = get_quota()
 
-    #     # Check storage quota before proceeding
-    #     quota_info = get_quota()
-    #     if not get_quota_threshold(quota_info):
-    #         return
+        converter = RawFileConverter(firestore_service=drive_service.firestore_service)
 
-    #     # Initialize the RawFileConverter with the same Firestore service
-    #     converter = RawFileConverter(firestore_service=drive_service.firestore_service)
+        machine_id = os.uname().nodename
+        logger.info(f"Running on machine: {machine_id}")
 
-    #     # Get machine identifier for tracking
-    #     machine_id = os.uname().nodename
-    #     logger.info(f"Running on machine: {machine_id}")
+        # Fetch files from Google Drive
+        logger.info("Fetching file list from Google Drive")
+        files = drive_service.list_files()
 
-    #     # Fetch files from Google Drive
-    #     logger.info("Fetching file list from Google Drive")
-    #     files = drive_service.list_files()
+        raw_files = [
+            file
+            for file in files
+            if file["name"].lower().endswith((".cr3", ".arw", ".nef"))
+        ]
+        logger.info(f"Found {len(raw_files)} raw files to process")
 
-    #     # Filter for raw files
-    #     raw_files = [
-    #         file
-    #         for file in files
-    #         if file["name"].lower().endswith((".cr3", ".arw", ".nef"))
-    #     ]
-    #     logger.info(f"Found {len(raw_files)} raw files to process")
+        # Process each file
+        for file in raw_files:
+            file_id = file["id"]
+            file_name = file["name"]
 
-    #     # Process each file
-    #     for file in raw_files:
-    #         process_file(
-    #             drive_service,
-    #             converter,
-    #             file,
-    #             machine_id,
-    #             download_dir,
-    #             output_dir,
-    #             dng_folder_id,
-    #         )
+            status_info = drive_service.get_file_status(file_id)
+            status = status_info["status"] if status_info else None
 
-    #         move_to_archive(drive_service, file, archive_folder_id)
+            if status in ("uploaded", "processed", "processing"):
+                logger.info(f"Skipping {file_name} (ID: {file_id}). Status is {status}")
+                continue
+
+            # TODO Implement retry logic
+
+            drive_service.mark_file_as_processing(file_id, machine_id)
+
+            # TODO download file
+
+            # TODO convert file
+
+            # TODO upload to nas
+
+            # move to archive
+            move_to_archive(drive_service, file, archive_folder_id)
 
     except Exception as e:
         logger.error(f"An error occurred in the main script: {str(e)}")
