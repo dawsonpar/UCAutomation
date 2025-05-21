@@ -117,7 +117,16 @@ def main():
 
             drive_service.mark_file_as_processing(file_id, machine_id)
 
-            # TODO download file
+            local_path = os.path.join(download_dir, file_name)
+            if not drive_service.download_file(file_id, local_path):
+                error_msg = f"Failed to download {file_name} (ID: {file_id})"
+                logger.error(error_msg)
+                drive_service.mark_file_as_failed(
+                    file_id=file_id, machine_id=machine_id, error_message=error_msg
+                )
+                continue
+
+            logger.info(f"Downloaded: {file_name} to {local_path}")
 
             # TODO convert file
 
