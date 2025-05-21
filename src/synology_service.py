@@ -110,7 +110,17 @@ class SynologyService:
                 debug=True,
             )
 
-            fs.upload_file(folder_path, file_path, overwrite=False)
+            data = fs.upload_file(folder_path, file_path, overwrite=False)
+            if isinstance(data, tuple) and len(data) == 2:
+                status, response = data
+                if isinstance(response, dict) and response.get("success") is False:
+                    logger.error(
+                        f"Upload not successful. success: {response.get('success')}, error: {response.get('error')}"
+                    )
+                    logger.info(
+                        f"HINT: Docs for FileStation error codes: https://github.com/N4S4/synology-api/blob/df849c656b2fc8e5084eebd3d9c114ea8f8b4bcc/synology_api/error_codes.py#L103"
+                    )
+                    return False
             return True
         except Exception as e:
             logger.error(f"Error trying to upload file: {str(e)}")
