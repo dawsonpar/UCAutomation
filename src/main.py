@@ -23,7 +23,7 @@ def main():
 
     # Get required environment variables
     folder_id = os.environ.get("INGEST_FOLDER_ID")
-    dng_folder_path = os.environ.get("NAS_DEST_PATH")
+    dng_dest_path = os.environ.get("NAS_DEST_PATH")
     archive_folder_id = os.environ.get("ARCHIVE_FOLDER_ID")
     google_creds_path = os.environ.get("GOOGLE_CREDENTIALS_PATH")
     firebase_creds_path = os.environ.get("FIREBASE_CREDENTIALS_PATH")
@@ -115,6 +115,7 @@ def main():
 
             # TODO Implement retry logic
 
+            # Download raw file
             drive_service.mark_file_as_processing(file_id, machine_id)
 
             local_path = os.path.join(download_dir, file_name)
@@ -128,6 +129,7 @@ def main():
 
             logger.info(f"Downloaded: {file_name} to {local_path}")
 
+            # Convert raw to dng
             converted = converter.convert(
                 local_path, output_dir, file_id, already_marked=True
             )
@@ -139,10 +141,39 @@ def main():
                 )
                 continue
 
-            # TODO upload to nas
+            # Upload to NAS
+            dng_file_name = os.path.splitext(file_name)[0] + ".dng"
+            dng_file_path = os.path.join(output_dir, dng_file_name)
 
-            # move to archive
-            move_to_archive(drive_service, file, archive_folder_id)
+            if not os.path.exists(dng_file_path):
+                error_msg = f"DNG file not found after conversion: {dng_file_path}"
+                logger.error(error_msg)
+                drive_service.mark_file_as_failed(
+                    file_id=file_id, machine_id=machine_id, error_message=error_msg
+                )
+                continue
+
+            synology_service = SynologyService(firebase_creds_path)
+
+            uploaded = synology_service.upload(
+                nas_ip, nas_port, nas_user, nas_pwd, dng_file_path, dng_dest_path
+            )
+
+            if not uploaded:
+                error_msg = f"Failed to upload {dng_file_name} to NAS."
+                logger.error(error_msg)
+                drive_service.mark_file_as_failed(
+                    file_id=file_id, machine_id=machine_id, error_message=error_msg
+                )
+                continue
+
+            # Move to archive
+            move_successful = move_to_archive(drive_service, file, archive_folder_id)
+
+            if not move_successful:
+                logger.warning(
+                    f"{file_name}(ID: {file_id}) was not successfully moved to archive."
+                )
 
     except Exception as e:
         logger.error(f"An error occurred in the main script: {str(e)}")
