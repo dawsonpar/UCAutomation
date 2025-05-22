@@ -177,7 +177,7 @@ def main():
                 {
                     "original_filename": file_name,
                     "converted_filename": dng_file_name,
-                    "dng_dest": dng_file_path,
+                    "dng_dest": dng_dest_path,
                 },
             )
 
