@@ -323,16 +323,16 @@ def move_to_archive(drive_service, file, archive_folder_id):
         folder_id (str): The ID of the destination folder.
 
     Returns:
-        list: The new parent folder IDs if successful, None otherwise.
+        bool: True if move was successful
     """
 
     file_id = file["id"]
     file_name = file["name"]
 
     status = drive_service.get_file_status(file_id)
-    if not status.get("status") == "uploaded":
+    if not status or status.get("status") != "uploaded":
         logger.error(
-            f"Did not move {file_name}({file_id}) to archive. Status is {status.get("status")}"
+            f"Did not move {file_name}({file_id}) to archive. Status is {status.get("status") if status else 'None'}"
         )
         return False
 

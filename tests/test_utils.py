@@ -874,3 +874,31 @@ class TestMoveToArchive:
         mock_drive_service.move_file.assert_called_once_with(
             "file123", "archive_folder_id"
         )
+
+    def test_move_to_archive_status_none(self, mock_drive_service):
+        """Test handling when get_file_status returns None (file status can't be found)"""
+        mock_drive_service.get_file_status.return_value = None
+        test_file = {"id": "file123", "name": "test.cr3"}
+
+        result = utils.move_to_archive(
+            mock_drive_service, test_file, "archive_folder_id"
+        )
+
+        assert result is False
+        mock_drive_service.get_file_status.assert_called_once_with("file123")
+        mock_drive_service.move_file.assert_not_called()
+
+    def test_move_to_archive_file_missing_id(self, mock_drive_service):
+        """Test handling when the file dict is missing the 'id' key (file can't be found)"""
+        test_file = {"name": "test.cr3"}  # Missing 'id'
+        # Should raise KeyError
+        with pytest.raises(KeyError):
+            utils.move_to_archive(mock_drive_service, test_file, "archive_folder_id")
+
+    def test_move_to_archive_file_missing_name(self, mock_drive_service):
+        """Test handling when the file dict is missing the 'name' key (file can't be found)"""
+        test_file = {"id": "file123"}  # Missing 'name'
+        # get_file_status will be called, but then KeyError on file_name
+        mock_drive_service.get_file_status.return_value = {"status": "uploaded"}
+        with pytest.raises(KeyError):
+            utils.move_to_archive(mock_drive_service, test_file, "archive_folder_id")
