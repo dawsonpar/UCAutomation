@@ -38,6 +38,8 @@ def main():
         missing_vars.append("INGEST_FOLDER_ID")
     if not archive_folder_id:
         missing_vars.append("ARCHIVE_FOLDER_ID")
+    if not dng_dest_path:
+        missing_vars.append("NAS_DEST_PATH")
     if not google_creds_path:
         missing_vars.append("GOOGLE_CREDENTIALS_PATH")
     if not firebase_creds_path:
