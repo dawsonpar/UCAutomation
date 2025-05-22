@@ -128,7 +128,16 @@ def main():
 
             logger.info(f"Downloaded: {file_name} to {local_path}")
 
-            # TODO convert file
+            converted = converter.convert(
+                local_path, output_dir, file_id, already_marked=True
+            )
+            if not converted:
+                error_msg = f"Failed to convert {file_name}"
+                logger.error(error_msg)
+                drive_service.mark_file_as_failed(
+                    file_id=file_id, machine_id=machine_id, error_message=error_msg
+                )
+                continue
 
             # TODO upload to nas
 
