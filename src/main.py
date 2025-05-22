@@ -157,6 +157,8 @@ def main():
 
             synology_service = SynologyService(firebase_creds_path)
 
+            base_url = f"https://{nas_ip}:{nas_port}/webapi"
+            nas_sid = synology_service.get_sid(base_url, nas_user, nas_pwd)
             uploaded = synology_service.upload(
                 nas_ip, nas_port, nas_user, nas_pwd, dng_file_path, dng_dest_path
             )
@@ -168,6 +170,21 @@ def main():
                     file_id=file_id, machine_id=machine_id, error_message=error_msg
                 )
                 continue
+
+            drive_service.mark_file_as_uploaded(
+                file_id,
+                machine_id,
+                {
+                    "original_filename": file_name,
+                    "converted_filename": dng_file_name,
+                    "dng_dest": dng_file_path,
+                },
+            )
+
+            logged_out = synology_service.logout(base_url, nas_sid)
+
+            if not logged_out:
+                logger.warning("There was a problem logging out of the NAS session.")
 
             # Move to archive
             move_successful = move_to_archive(drive_service, file, archive_folder_id)
