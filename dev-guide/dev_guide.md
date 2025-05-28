@@ -25,6 +25,8 @@ cd ~/UCAutomation
 
 ## 2. Set up Python Environment
 
+Brew is the package installer used in the following installation. Install brew or another package installer to continue.
+
 1. Install pyenv if not already installed:
 
 ```bash
@@ -70,11 +72,12 @@ pyenv local ucauto
 ```bash
 pip install -r src/requirements.txt
 ```
+
 or
+
 ```bash
 pip3 install -r src/requirements.txt
 ```
-
 
 ## 4. Create Required Directories
 
@@ -98,12 +101,20 @@ touch .env
 
 ```
 # Google Service Account Credentials Path
-GOOGLE_CREDENTIALS_PATH="/replace/path/to/UCAutomation/credentials.json"
-FIREBASE_CREDENTIALS_PATH="/replace/path/to/credentials.json"
+GOOGLE_CREDENTIALS_PATH="/PlACEHOLDER/REPLACE/PATH/TO/UCAutomation/credentials.json"
+FIREBASE_CREDENTIALS_PATH="/PLACEHOLDER/REPLACE/PATH/TO/credentials.json"
+
+# NAS Requirements
+NAS_IP="PLACEHOLDER"
+NAS_PORT="PLACEHOLDER"
+NAS_USER="PLACEHOLDER"
+NAS_PWD="PLACEHOLDER"
+NAS_DEST_PATH="PLACEHOLDER"
 
 # Google Drive IDs
-INGEST_FOLDER_ID="your_ingest_folder_id_here"
-DNG_FOLDER_ID="your_dng_folder_id_here"
+INGEST_FOLDER_ID="PLACEHOLDER"
+DNG_FOLDER_ID="PLACEHOLDER"
+ARCHIVE_FOLDER_ID="PLACEHOLDER"
 ```
 
 3. Place your credentials.json file in the root directory of the project.
@@ -158,6 +169,7 @@ launchctl list | grep rawconverter
 ## Troubleshooting
 
 ### Google IAM Service Account Out of Storage
+
 Navigate to Google Cloud and go into the UCAutomation project.
 
 In the sidebar go to IAM & Admin and Service Accounts
@@ -172,8 +184,7 @@ Give the Service Account a descriptive name that can identify your machine
 Give the Service account the following roles: Firebase Rules System, Firestore Service Agent, Cloud Datastore User
 <img width="947" alt="Screenshot 2025-04-28 at 10 42 59 AM" src="https://github.com/user-attachments/assets/a956ffa6-0267-4363-8150-19fa769faa5c" />
 
-Click Done and click on the 
-
+Click Done and click on the
 
 ### Converted file not found
 
