@@ -121,6 +121,9 @@ class SynologyService:
                         f"HINT: Docs for FileStation error codes: https://github.com/N4S4/synology-api/blob/df849c656b2fc8e5084eebd3d9c114ea8f8b4bcc/synology_api/error_codes.py#L103"
                     )
                     return False
+            logger.info(
+                f"Successfully uploaded {data["data"]["file"]} to {folder_path}"
+            )
             return True
         except Exception as e:
             logger.error(f"Error trying to upload file: {str(e)}")
