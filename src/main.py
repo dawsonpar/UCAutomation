@@ -132,21 +132,24 @@ def main():
             logger.info(f"Downloaded: {file_name} to {local_path}")
 
             # Convert raw to dng
-            converted = converter.convert(
-                local_path, output_dir, file_id, already_marked=True
-            )
-            if not converted:
-                error_msg = f"Failed to convert {file_name}"
-                logger.error(error_msg)
-                drive_service.mark_file_as_failed(
-                    file_id=file_id, machine_id=machine_id, error_message=error_msg
-                )
-                continue
-
-            # Upload to NAS
             dng_file_name = os.path.splitext(file_name)[0] + ".dng"
             dng_file_path = os.path.join(output_dir, dng_file_name)
 
+            if not os.path.exists(dng_file_path):
+                converted = converter.convert(
+                    local_path, output_dir, file_id, already_marked=True
+                )
+                if not converted:
+                    error_msg = f"Failed to convert {file_name}"
+                    logger.error(error_msg)
+                    drive_service.mark_file_as_failed(
+                        file_id=file_id, machine_id=machine_id, error_message=error_msg
+                    )
+                    continue
+            else:
+                logger.info(f"DNG file already exists: {dng_file_path}")
+
+            # Upload to NAS
             if not os.path.exists(dng_file_path):
                 error_msg = f"DNG file not found after conversion: {dng_file_path}"
                 logger.error(error_msg)

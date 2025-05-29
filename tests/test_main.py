@@ -213,7 +213,9 @@ class TestConversionCases(unittest.TestCase):
             "main.RawFileConverter"
         ) as mock_converter_cls, patch(
             "main.move_to_archive"
-        ) as mock_move_to_archive:
+        ) as mock_move_to_archive, patch(
+            "os.path.exists"
+        ) as mock_exists:
 
             mock_synology.return_value.get_api_info.return_value = {}
             mock_synology.return_value.upload.return_value = True
@@ -227,6 +229,13 @@ class TestConversionCases(unittest.TestCase):
             mock_converter = MagicMock()
             mock_converter.convert.return_value = convert_success
             mock_converter_cls.return_value = mock_converter
+
+            def exists_side_effect(path):
+                if path.endswith(".dng"):
+                    return mock_converter.convert.called
+                return False
+
+            mock_exists.side_effect = exists_side_effect
 
             main_mod.main()
             return mock_drive_service, mock_converter, mock_move_to_archive
@@ -248,6 +257,45 @@ class TestConversionCases(unittest.TestCase):
         self.assertTrue(mock_drive_service.mark_file_as_failed.called)
         self.assertTrue(mock_converter.convert.called)
         self.assertFalse(mock_move_to_archive.called)
+
+    def test_dng_file_already_exists(self):
+        with patch("main.load_dotenv"), patch("main.get_logger"), patch(
+            "main.clean_download_directories", return_value=(0, 0)
+        ), patch("main.get_quota", return_value={"usage_percentage": 10}), patch(
+            "main.SynologyService"
+        ) as mock_synology, patch(
+            "main.GoogleDriveService"
+        ) as mock_drive_service_cls, patch(
+            "main.RawFileConverter"
+        ) as mock_converter_cls, patch(
+            "main.move_to_archive"
+        ) as mock_move_to_archive, patch(
+            "os.path.exists"
+        ) as mock_exists:
+
+            mock_synology.return_value.get_api_info.return_value = {}
+            mock_synology.return_value.upload.return_value = True
+            mock_drive_service = MagicMock()
+            mock_drive_service.list_files.return_value = [
+                {"id": "file1", "name": "test1.cr3"},
+            ]
+            mock_drive_service.get_file_status.return_value = {"status": "failed"}
+            mock_drive_service.download_file.return_value = True
+            mock_drive_service_cls.return_value = mock_drive_service
+            mock_converter = MagicMock()
+            mock_converter_cls.return_value = mock_converter
+
+            def exists_side_effect(path):
+                if path.endswith(".dng"):
+                    return True
+                return False
+
+            mock_exists.side_effect = exists_side_effect
+
+            main_mod.main()
+
+            self.assertFalse(mock_converter.convert.called)
+            self.assertTrue(mock_move_to_archive.called)
 
 
 class TestUploadCases(unittest.TestCase):
