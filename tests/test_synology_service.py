@@ -9,7 +9,10 @@ class TestSynologyService(unittest.TestCase):
     def test_upload_success(self, mock_filestation):
         # Arrange
         mock_instance = mock_filestation.return_value
-        mock_instance.upload_file.return_value = True
+        mock_instance.upload_file.return_value = {
+            "data": {"file": "file.txt"},
+            "success": True,
+        }
         service = SynologyService()
 
         # Act
