@@ -817,6 +817,186 @@ class TestCleanDownloadDirectories:
             assert "Cleaning raw files directory" not in call[0][0]
             assert "Cleaning DNG files directory" not in call[0][0]
 
+    @patch("utils.os.path.expanduser")
+    @patch("utils.os.path.exists")
+    @patch("utils.os.path.isfile")
+    @patch("utils.os.path.getmtime")
+    @patch("utils.os.remove")
+    @patch("utils.os.listdir")
+    @patch("utils.time.time")
+    @patch("utils.open", new_callable=mock_open)
+    @patch("utils.logger")
+    def test_counter_accuracy_with_multiple_files(
+        self,
+        mock_logger,
+        mock_open,
+        mock_time,
+        mock_listdir,
+        mock_remove,
+        mock_getmtime,
+        mock_isfile,
+        mock_exists,
+        mock_expanduser,
+    ):
+        """Test counters are accurate with multiple files in both directories"""
+        mock_expanduser.return_value = "/home/testuser"
+        base_dir = "/home/testuser/UCAutomation"
+
+        # All directories and marker file exist
+        def exists_side_effect(path):
+            if path == f"{base_dir}/.last_cleanup":
+                return False
+            return True
+
+        mock_exists.side_effect = exists_side_effect
+
+        mock_isfile.return_value = True
+        current_time = 20 * 24 * 60 * 60
+        mock_time.return_value = current_time
+
+        def listdir_side_effect(path):
+            if path == f"{base_dir}/downloads/raw_files":
+                return ["raw1.cr3", "raw2.cr3", "raw3.cr3", "new.raw"]
+            if path == f"{base_dir}/downloads/dng_files":
+                return ["dng1.dng", "dng2.dng"]
+            return []
+
+        mock_listdir.side_effect = listdir_side_effect
+
+        # 3 old raw files, 1 new raw file, 2 old dng files
+        old_time = current_time - (8 * 24 * 60 * 60)
+        new_time = current_time - (3 * 24 * 60 * 60)
+
+        def getmtime_side_effect(path):
+            if (
+                "raw1" in path
+                or "raw2" in path
+                or "raw3" in path
+                or "dng1" in path
+                or "dng2" in path
+            ):
+                return old_time
+            return new_time
+
+        mock_getmtime.side_effect = getmtime_side_effect
+
+        result = utils.clean_download_directories(base_dir=base_dir)
+        assert result == (3, 2)
+        assert mock_remove.call_count == 5
+        mock_remove.assert_any_call(f"{base_dir}/downloads/raw_files/raw1.cr3")
+        mock_remove.assert_any_call(f"{base_dir}/downloads/raw_files/raw2.cr3")
+        mock_remove.assert_any_call(f"{base_dir}/downloads/raw_files/raw3.cr3")
+        mock_remove.assert_any_call(f"{base_dir}/downloads/dng_files/dng1.dng")
+        mock_remove.assert_any_call(f"{base_dir}/downloads/dng_files/dng2.dng")
+
+    @patch("utils.os.path.expanduser")
+    @patch("utils.os.path.exists")
+    @patch("utils.os.path.isfile")
+    @patch("utils.os.path.getmtime")
+    @patch("utils.os.remove")
+    @patch("utils.os.listdir")
+    @patch("utils.time.time")
+    @patch("utils.open", new_callable=mock_open, read_data="invalid_timestamp")
+    @patch("utils.logger")
+    def test_invalid_marker_file_contents(
+        self,
+        mock_logger,
+        mock_open,
+        mock_time,
+        mock_listdir,
+        mock_remove,
+        mock_getmtime,
+        mock_isfile,
+        mock_exists,
+        mock_expanduser,
+    ):
+        """Test that invalid marker file contents trigger cleanup and proper marker update"""
+        mock_expanduser.return_value = "/home/testuser"
+        base_dir = "/home/testuser/UCAutomation"
+
+        # Marker file exists, so does everything else
+        def exists_side_effect(path):
+            if path == f"{base_dir}/.last_cleanup":
+                return True
+            return True
+
+        mock_exists.side_effect = exists_side_effect
+
+        mock_isfile.return_value = True
+        current_time = 30 * 24 * 60 * 60
+        mock_time.return_value = current_time
+
+        def listdir_side_effect(path):
+            if path == f"{base_dir}/downloads/raw_files":
+                return ["raw1.cr3", "raw2.cr3"]
+            if path == f"{base_dir}/downloads/dng_files":
+                return ["dng1.dng"]
+            return []
+
+        mock_listdir.side_effect = listdir_side_effect
+
+        old_time = current_time - (8 * 24 * 60 * 60)
+        mock_getmtime.return_value = old_time
+
+        result = utils.clean_download_directories(base_dir=base_dir)
+        assert result == (2, 1)
+        # Marker file should be rewritten with a valid timestamp
+        mock_open.assert_any_call(f"{base_dir}/.last_cleanup", "w")
+        mock_open().write.assert_any_call(str(current_time))
+
+    @patch("utils.os.path.exists")
+    @patch("utils.os.path.isfile")
+    @patch("utils.os.path.getmtime")
+    @patch("utils.os.remove")
+    @patch("utils.os.listdir")
+    @patch("utils.time.time")
+    @patch("utils.open", new_callable=mock_open)
+    @patch("utils.logger")
+    def test_custom_base_directory(
+        self,
+        mock_logger,
+        mock_open,
+        mock_time,
+        mock_listdir,
+        mock_remove,
+        mock_getmtime,
+        mock_isfile,
+        mock_exists,
+    ):
+        """Test cleanup works with a custom base directory"""
+        custom_base = "/tmp/custom_base"
+        raw_dir = f"{custom_base}/downloads/raw_files"
+        dng_dir = f"{custom_base}/downloads/dng_files"
+
+        def exists_side_effect(path):
+            if path == f"{custom_base}/.last_cleanup":
+                return False
+            return True
+
+        mock_exists.side_effect = exists_side_effect
+
+        mock_isfile.return_value = True
+        current_time = 40 * 24 * 60 * 60
+        mock_time.return_value = current_time
+
+        def listdir_side_effect(path):
+            if path == raw_dir:
+                return ["old.raw"]
+            if path == dng_dir:
+                return []
+            return []
+
+        mock_listdir.side_effect = listdir_side_effect
+
+        old_time = current_time - (8 * 24 * 60 * 60)
+        mock_getmtime.return_value = old_time
+
+        result = utils.clean_download_directories(base_dir=custom_base)
+        assert result == (1, 0)
+        mock_remove.assert_called_once_with(f"{raw_dir}/old.raw")
+        mock_open.assert_any_call(f"{custom_base}/.last_cleanup", "w")
+        mock_open().write.assert_any_call(str(current_time))
+
 
 class TestMoveToArchive:
     """Tests for move_to_archive function"""

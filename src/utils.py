@@ -248,12 +248,20 @@ def clean_download_directories(base_dir=None, days_threshold=7):
             with open(marker_file, "r") as f:
                 try:
                     last_cleanup = datetime.fromtimestamp(float(f.read().strip()))
-                    days_since_cleanup = (datetime.now() - last_cleanup).days
-                    if days_since_cleanup < days_threshold:
-                        logger.info(
-                            f"Last cleanup was {days_since_cleanup} days ago. Skipping."
+                    current_time = datetime.now()
+
+                    if last_cleanup > current_time:
+                        logger.warning(
+                            f"Marker file timestamp ({last_cleanup}) is in the future. Will clean directories."
                         )
-                        cleanup_needed = False
+                        cleanup_needed = True
+                    else:
+                        days_since_cleanup = (current_time - last_cleanup).days
+                        if days_since_cleanup < days_threshold:
+                            logger.info(
+                                f"Last cleanup was {days_since_cleanup} days ago. Skipping."
+                            )
+                            cleanup_needed = False
                 except (ValueError, OSError) as e:
                     logger.warning(
                         f"Could not read last cleanup time: {e}. Will clean directories."
@@ -264,35 +272,33 @@ def clean_download_directories(base_dir=None, days_threshold=7):
 
         cutoff_time = time.time() - (days_threshold * 24 * 60 * 60)
 
-        # Define directories to clean with their counters
         directories = [
-            (download_dir, "raw files", 0),  # (directory_path, description, counter)
-            (output_dir, "DNG files", 0),
+            {"path": download_dir, "desc": "raw files", "count": 0},
+            {"path": output_dir, "desc": "DNG files", "count": 0},
         ]
 
-        # Process all directories using the same code
-        for dir_path, dir_desc, _ in directories:
+        # Process directories
+        for dir_info in directories:
+            dir_path = dir_info["path"]
+            dir_desc = dir_info["desc"]
+
             if os.path.exists(dir_path):
                 logger.info(f"Cleaning {dir_desc} directory: {dir_path}")
                 for item in os.listdir(dir_path):
                     item_path = os.path.join(dir_path, item)
-                    if os.path.isfile(item_path):
-                        file_time = os.path.getmtime(item_path)
-                        if file_time < cutoff_time:
-                            try:
-                                os.remove(item_path)
-                                idx = directories.index((dir_path, dir_desc, _))
-                                directories[idx] = (
-                                    dir_path,
-                                    dir_desc,
-                                    directories[idx][2] + 1,
-                                )
-                            except OSError as e:
-                                logger.error(f"Error removing {item_path}: {e}")
+                    if (
+                        os.path.isfile(item_path)
+                        and os.path.getmtime(item_path) < cutoff_time
+                    ):
+                        try:
+                            os.remove(item_path)
+                            dir_info["count"] += 1  # Directly update the dictionary
+                        except OSError as e:
+                            logger.error(f"Error removing {item_path}: {e}")
 
-        # Extract counters from the directories list
-        raw_files_removed = directories[0][2]
-        dng_files_removed = directories[1][2]
+        # Extract results
+        raw_files_removed = directories[0]["count"]
+        dng_files_removed = directories[1]["count"]
 
         # Update marker file with current timestamp
         with open(marker_file, "w") as f:
