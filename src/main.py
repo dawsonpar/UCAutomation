@@ -6,13 +6,7 @@ from google_drive_service import GoogleDriveService
 from log_config import get_logger
 from raw_converter import RawFileConverter
 from synology_service import SynologyService
-from utils import (
-    clean_download_directories,
-    get_quota,
-    get_quota_threshold,
-    move_to_archive,
-    process_file,
-)
+from utils import clean_download_directories, move_to_archive
 
 logger = get_logger()
 
@@ -84,8 +78,6 @@ def main():
             credentials_path=google_creds_path,
             firebase_credentials_path=firebase_creds_path,
         )
-
-        quota_info = get_quota()
 
         converter = RawFileConverter(firestore_service=drive_service.firestore_service)
 

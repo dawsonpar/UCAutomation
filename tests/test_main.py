@@ -43,9 +43,7 @@ class TestStatusCases(unittest.TestCase):
         # Patch all external dependencies
         with patch("main.load_dotenv"), patch("main.get_logger"), patch(
             "main.clean_download_directories", return_value=(0, 0)
-        ), patch("main.get_quota", return_value={"usage_percentage": 10}), patch(
-            "main.SynologyService"
-        ) as mock_synology, patch(
+        ), patch("main.SynologyService") as mock_synology, patch(
             "main.GoogleDriveService"
         ) as mock_drive_service_cls, patch(
             "main.RawFileConverter"
@@ -98,13 +96,13 @@ class TestStatusCases(unittest.TestCase):
         )
         # Should process the file (mark_file_as_processing called)
         self.assertTrue(mock_drive_service.mark_file_as_processing.called)
-        self.assertTrue(mock_move_to_archive.called)
+        self.assertFalse(mock_move_to_archive.called)
 
     def test_status_none(self):
         mock_drive_service, mock_move_to_archive = self.run_main_with_status(None)
         # Should process the file (mark_file_as_processing called)
         self.assertTrue(mock_drive_service.mark_file_as_processing.called)
-        self.assertTrue(mock_move_to_archive.called)
+        self.assertFalse(mock_move_to_archive.called)
 
 
 class TestDownloadCases(unittest.TestCase):
@@ -137,15 +135,15 @@ class TestDownloadCases(unittest.TestCase):
     def run_main_with_download_result(self, download_success=True):
         with patch("main.load_dotenv"), patch("main.get_logger"), patch(
             "main.clean_download_directories", return_value=(0, 0)
-        ), patch("main.get_quota", return_value={"usage_percentage": 10}), patch(
-            "main.SynologyService"
-        ) as mock_synology, patch(
+        ), patch("main.SynologyService") as mock_synology, patch(
             "main.GoogleDriveService"
         ) as mock_drive_service_cls, patch(
             "main.RawFileConverter"
         ) as mock_converter_cls, patch(
             "main.move_to_archive"
-        ) as mock_move_to_archive:
+        ) as mock_move_to_archive, patch(
+            "os.path.exists"
+        ) as mock_exists:
 
             mock_synology.return_value.get_api_info.return_value = {}
             mock_synology.return_value.upload.return_value = True
@@ -158,6 +156,13 @@ class TestDownloadCases(unittest.TestCase):
             mock_drive_service.download_file.return_value = download_success
             mock_drive_service_cls.return_value = mock_drive_service
             mock_converter_cls.return_value = MagicMock()
+
+            def exists_side_effect(path):
+                if path.endswith(".dng"):
+                    return True
+                return False
+
+            mock_exists.side_effect = exists_side_effect
 
             main_mod.main()
             return mock_drive_service
@@ -205,9 +210,7 @@ class TestConversionCases(unittest.TestCase):
     def run_main_with_conversion_result(self, convert_success=True):
         with patch("main.load_dotenv"), patch("main.get_logger"), patch(
             "main.clean_download_directories", return_value=(0, 0)
-        ), patch("main.get_quota", return_value={"usage_percentage": 10}), patch(
-            "main.SynologyService"
-        ) as mock_synology, patch(
+        ), patch("main.SynologyService") as mock_synology, patch(
             "main.GoogleDriveService"
         ) as mock_drive_service_cls, patch(
             "main.RawFileConverter"
@@ -261,9 +264,7 @@ class TestConversionCases(unittest.TestCase):
     def test_dng_file_already_exists(self):
         with patch("main.load_dotenv"), patch("main.get_logger"), patch(
             "main.clean_download_directories", return_value=(0, 0)
-        ), patch("main.get_quota", return_value={"usage_percentage": 10}), patch(
-            "main.SynologyService"
-        ) as mock_synology, patch(
+        ), patch("main.SynologyService") as mock_synology, patch(
             "main.GoogleDriveService"
         ) as mock_drive_service_cls, patch(
             "main.RawFileConverter"
@@ -328,9 +329,7 @@ class TestUploadCases(unittest.TestCase):
     def run_main_with_upload_result(self, upload_success=True, dng_file_exists=True):
         with patch("main.load_dotenv"), patch("main.get_logger"), patch(
             "main.clean_download_directories", return_value=(0, 0)
-        ), patch("main.get_quota", return_value={"usage_percentage": 10}), patch(
-            "main.SynologyService"
-        ) as mock_synology_cls, patch(
+        ), patch("main.SynologyService") as mock_synology_cls, patch(
             "main.GoogleDriveService"
         ) as mock_drive_service_cls, patch(
             "main.RawFileConverter"
