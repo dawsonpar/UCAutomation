@@ -7,23 +7,40 @@
 
         <key>ProgramArguments</key>
         <array>
-            <string>/path/to/pyenv</string>
-            <string>/path/to/UCAutomation/src/main.py</string>
+            <!-- <string>/path/to/pyenv</string>
+            <string>/path/to/UCAutomation/src/main.py</string> -->
+            <string>/path/to/UCAutomation/dev-guide/uc_automation</string>
         </array>
 
         <key>StartInterval</key>
         <integer>3600</integer>  <!-- Runs every hour -->
 
         <key>StandardOutPath</key>
-        <string>/path/to/UCAutomation/src/lib/rawconverter_out.log</string>
+        <string>/REPLACE/PLACEHOLDER/UCAutomation/src/lib/rawconverter_out.log</string>
 
         <key>StandardErrorPath</key>
-        <string>/path/to/UCAutomation/src/lib/rawconverter_err.log</string>
+        <string>/REPLACE/PLACEHOLDER/UCAutomation/src/lib/rawconverter_err.log</string>
         
         <key>EnvironmentVariables</key>
         <dict>
             <key>GOOGLE_CREDENTIALS_PATH</key>
-            <string>/path/to/UCAutomation/credentials.json</string>
+            <string>/REPLACE/PLACEHOLDER/UCAutomation/credentials.json</string>
+            <key>FIREBASE_CREDENTIALS_PATH</key>
+            <string>/REPLACE/PLACEHOLDER/UCAutomation/credentials.json</string>
+            <key>NAS_IP</key>
+            <string>PLACEHOLDER</string>
+            <key>NAS_PORT</key>
+            <string>PLACEHOLDER</string>
+            <key>NAS_USER</key>
+            <string>PLACEHOLDER</string>
+            <key>NAS_PWD</key>
+            <string>PLACEHOLDER</string>
+            <key>NAS_DEST_PATH</key>
+            <string>PLACEHOLDER</string>
+            <key>INGEST_FOLDER_ID</key>
+            <string>PLACEHOLDER</string>
+            <key>ARCHIVE_FOLDER_ID</key>
+            <string>PLACEHOLDER</string>
         </dict>
     </dict>
 </plist>
