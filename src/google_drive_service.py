@@ -109,7 +109,7 @@ class GoogleDriveService:
                 .list(
                     q=f"'{folder_id}' in parents",
                     fields="files(id, name, mimeType)",
-                    pageSize=200,
+                    pageSize=100,
                 )
                 .execute()
             )
