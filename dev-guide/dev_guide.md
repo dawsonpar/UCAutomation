@@ -3,12 +3,10 @@
 ## Requirements
 
 - Mac machine
-- Pyenv installed
-- Python >= 3.13.1
 - Adobe DNG Converter 17.2.0 installed
 - Google Drive API credentials (credentials.json file)
 
-## 1. Download and Setup
+## 1. Download
 
 1. Clone the repository:
 
@@ -23,103 +21,7 @@ mv UCAutomation ~/
 cd ~/UCAutomation
 ```
 
-## 2. Set up Python Environment
-
-Brew is the package installer used in the following installation. Install brew or another package installer to continue.
-
-1. Install pyenv if not already installed:
-
-```bash
-brew install pyenv
-```
-
-2. Install pyenv-virtualenv if not already installed:
-
-```bash
-brew install pyenv-virtualenv
-```
-
-3. Add pyenv to your shell:
-
-```bash
-echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
-echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
-echo 'eval "$(pyenv init -)"' >> ~/.zshrc
-echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc
-```
-
-4. Restart your terminal or run:
-
-```bash
-source ~/.zshrc
-```
-
-5. Install Python using pyenv:
-
-```bash
-pyenv install 3.13.1
-```
-
-6. Create and activate a virtual environment:
-
-```bash
-pyenv virtualenv 3.13.1 ucauto
-pyenv local ucauto
-```
-
-## 3. Install Dependencies
-
-```bash
-pip install -r src/requirements.txt
-```
-
-or
-
-```bash
-pip3 install -r src/requirements.txt
-```
-
-## 4. Create Required Directories
-
-Create the lib directory for logs:
-
-```bash
-mkdir -p ~/UCAutomation/lib
-mkdir -p ~/UCAutomation/downloads/raw_files
-mkdir -p ~/UCAutomation/downloads/dng_files
-```
-
-## 5. Configure Environment Variables
-
-1. Create or edit the .env file in the root directory:
-
-```bash
-touch .env
-```
-
-2. Add the following content to the .env file (replace the placeholders with your actual values):
-
-```
-# Google Service Account Credentials Path
-GOOGLE_CREDENTIALS_PATH="/PlACEHOLDER/REPLACE/PATH/TO/UCAutomation/credentials.json"
-FIREBASE_CREDENTIALS_PATH="/PLACEHOLDER/REPLACE/PATH/TO/credentials.json"
-
-# NAS Requirements
-NAS_IP="PLACEHOLDER"
-NAS_PORT="PLACEHOLDER"
-NAS_USER="PLACEHOLDER"
-NAS_PWD="PLACEHOLDER"
-NAS_DEST_PATH="PLACEHOLDER"
-
-# Google Drive IDs
-INGEST_FOLDER_ID="PLACEHOLDER"
-DNG_FOLDER_ID="PLACEHOLDER"
-ARCHIVE_FOLDER_ID="PLACEHOLDER"
-```
-
-3. Place your credentials.json file in the root directory of the project.
-
-## 6. Set up LaunchD for Automation
+## 2. Set up LaunchD for Automation
 
 1. Move the launchd configuration file to LaunchAgents:
 
@@ -133,11 +35,22 @@ cp dev-guide/com.uc.rawconverter.plist ~/Library/LaunchAgents/
 nano ~/Library/LaunchAgents/com.uc.rawconverter.plist
 ```
 
-3. Update the following in the plist file:
+3. Change all PLACEHOLDERS in the plist file:
 
-   - `<string>/Library/Frameworks/Python.framework/Versions/3.12/bin/python3</string>` with your pyenv Python path. Find your path with `which python` after activating your virtualenv.
-   - `<string>/Users/photographer/UCAutomation/src/main.py</string>` with your actual path to main.py
-   - Update any other paths to match your username and setup
+   - ### ProgramArguments
+     - `<string>/REPLACE/PLACEHOLDER/UCAutomation/dev-guide/uc_automation</string>` change /REPLACE/PLACEHOLDER/path/to with actual path to /UCAutomation directory
+   - ### StandardOutPath
+
+     - `<string>/REPLACE/PLACEHOLDER/UCAutomation/src/lib/rawconverter_out.log</string>` change /REPLACE/PLACEHOLDER/path/to with actual path to /UCAutomation directory
+
+   - ### StandardErrorPath
+
+     - `<string>/REPLACE/PLACEHOLDER/UCAutomation/src/lib/rawconverter_out.log</string>` change /REPLACE/PLACEHOLDER/path/to with actual path to /UCAutomation directory
+
+   - ### EnvironmentVariables
+     - Change strings for GOOGLE_CREDENTIALS_PATH and FIREBASE_CREDENTIALS_PATH to the path for your Google Drive API credentials.
+     - NAS Variables: Change strings to valid IP, port, username, password, and final DNG destination path.
+     - Change strings for INGEST_FOLDER_ID and ARCHIVE_FOLDER_ID to google drive folder IDs for 'ingest' and 'already ingested'.
 
 4. Load and start the LaunchD service:
 
@@ -146,7 +59,7 @@ launchctl load ~/Library/LaunchAgents/com.uc.rawconverter.plist
 launchctl start com.uc.rawconverter
 ```
 
-## 7. Verify Installation
+## 3. Verify Installation
 
 1. Check the logs to verify the script is running:
 
@@ -164,6 +77,12 @@ cat ~/UCAutomation/lib/rawconverter_error.log
 
 ```bash
 launchctl list | grep rawconverter
+```
+
+To stop the script run the following command:
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.uc.rawconverter.plist
 ```
 
 ## Troubleshooting
