@@ -3,7 +3,7 @@
 ## Requirements
 
 - Mac machine
-- Adobe DNG Converter 17.2.0 installed
+- Latest version of Adobe DNG Converter installed
 - Google Drive API credentials (credentials.json file)
 
 ## 1. Download
@@ -87,7 +87,7 @@ launchctl unload ~/Library/LaunchAgents/com.uc.rawconverter.plist
 
 ## Troubleshooting
 
-### Google IAM Service Account Out of Storage
+### Creating a new Google IAM Service Account
 
 Navigate to Google Cloud and go into the UCAutomation project.
 
@@ -103,7 +103,25 @@ Give the Service Account a descriptive name that can identify your machine
 Give the Service account the following roles: Firebase Rules System, Firestore Service Agent, Cloud Datastore User
 <img width="947" alt="Screenshot 2025-04-28 at 10 42 59 AM" src="https://github.com/user-attachments/assets/a956ffa6-0267-4363-8150-19fa769faa5c" />
 
-Click Done and click on the
+Click Done and then click on the email of the service account you just created. Navigate to Keys and click on Add key.
+<img width="670" alt="Screenshot 2025-06-04 at 11 43 25 AM" src="https://github.com/user-attachments/assets/1904300b-0e26-4ab0-a369-be16a163a784" />
+
+Create a new key and select JSON for the format of your key.
+<img width="888" alt="Screenshot 2025-06-04 at 11 44 41 AM" src="https://github.com/user-attachments/assets/fa3524e8-1cee-446a-9021-4fa96941e257" />
+
+Once you click create the service account key will be downloaded to your computer. Rename this file to something appropriate like `{machine}-credentials.json` then move it to the root directory of the UCAutomation project.
+
+Don't forget to update the path to this credentials file in your launchd file.
+<img width="888" alt="Screenshot 2025-06-04 at 11 50 19 AM" src="https://github.com/user-attachments/assets/943bb59d-5c3c-402c-8fa1-38f9011bee72" />
+
+### Synology NAS Failed to establish a new connection: [Errno 65] No route to host
+Make sure that you give the exec file/launchd file permission to access machines on your local network.
+
+### 407 error when trying to upload to Synology NAS
+Validate that the Synology user has permission to upload or edit in the Synology destination folder.
+
+### 408 error when trying to upload to Synology NAS
+Validate that the Synology destination folder path is correct and exists.
 
 ### Converted file not found
 
@@ -117,7 +135,7 @@ Check the version of Adobe DNG Converter and see if it supports converting the l
 
 - Verify your credentials.json file exists and the path in .env is correct
 
-### 404 Error when trying to upload to folder
+### 404 Error when trying to upload to Google Drive folder
 
 If you get a 404 error about the upload folder, check for:
 
